@@ -10,6 +10,7 @@ const { check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 const config = require("config");
 const bcrypt = require("bcryptjs");
+const User = require("../../../models/user_test");
 
 // @route    POST /auth
 // @desc     Autenticar o usuário e obter token
@@ -22,20 +23,24 @@ exports.autenticar_usuario = async (req, res) => {
   const { user_email, user_password } = req.body;
 
   try {
-    let user = await User.findOne({ user_email });
+    let user = await User.findOne({
+      where: {
+        email: user_email
+      }
+    });
 
     if (!user) {
       return res
         .status(400)
-        .json({ errors: [{ msg: "Email ou senha incorretos" }] });
+        .json({ errorMessage: "Email ou senha incorretos" });
     }
 
-    const isMatch = await bcrypt.compare(user_password, user.user_password);
+    const isMatch = await bcrypt.compare(user_password, user.senha);
 
     if (!isMatch) {
       return res
         .status(400)
-        .json({ errors: [{ msg: "Email ou senha incorretos" }] });
+        .json({ errorMessage: "Email ou senha incorretos" });
     }
 
     const payload = {
@@ -54,7 +59,7 @@ exports.autenticar_usuario = async (req, res) => {
       }
     );
   } catch (err) {
-    console.error(err.message);
+    console.error(err);
     res
       .status(500)
       .json({ errorMessage: "Erro de servidor", callback: err.message });

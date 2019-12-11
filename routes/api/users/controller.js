@@ -9,9 +9,10 @@ const { check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 const config = require("config");
 const bcrypt = require("bcryptjs");
+const User = require("../../../models/user_test");
 
 // @route    POST /api/users/create
-// @desc     Autenticar o usuário e obter token
+// @desc     Registrar usuário e obter token
 exports.registrar_usuario = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -19,30 +20,26 @@ exports.registrar_usuario = async (req, res) => {
   }
 
   const { user_name, user_email, user_password } = req.body;
+  let userObject = { senha: user_password, nome: user_name, email: user_email };
 
   try {
-    let user = await User.findOne({ user_email });
-
-    if (user) {
-      res.status(400).json({ errors: [{ msg: "Usuário já existe" }] });
-    }
-
-    user = new User({
-      user_name,
-      user_email,
-      user_password,
-      user_access: 0
+    let user = await User.findOne({
+      where: {
+        email: user_email
+      }
     });
 
+    if (user) {
+      return res.status(400).json({ errorMessage: "Usuário já existe" });
+    }
+
     const salt = await bcrypt.genSalt(10);
-
-    user.user_password = await bcrypt.hash(user_password, salt);
-
-    await user.save();
+    userObject.senha = await bcrypt.hash(user_password, salt);
+    let userResponse = await User.create(userObject);
 
     const payload = {
       user: {
-        id: user.id
+        id: userResponse.id
       }
     };
 
@@ -56,8 +53,10 @@ exports.registrar_usuario = async (req, res) => {
       }
     );
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Erro de servidor");
+    console.error(err);
+    res
+      .status(500)
+      .json({ errorMessage: "Erro de servidor", callback: err.message });
   }
 };
 
@@ -72,4 +71,21 @@ exports.validator_registrar = (req, res, next) => {
       "Por favor coloque uma senha com 6 ou mais caracteres"
     ).isLength({ min: 6 });
   next();
+};
+
+// @route    GET /api/users/all
+// @desc     Retornar todos os usuários do banco
+exports.retornar_todos_usuarios = async (req, res) => {
+  try {
+    const response = await User.findAll();
+
+    if (!response) res.send("Nenhum registro encontrado");
+
+    res.send(response);
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ errorMessage: "Erro de servidor", callback: err.message });
+  }
 };
