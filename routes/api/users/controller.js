@@ -10,6 +10,8 @@ const jwt = require("jsonwebtoken");
 const config = require("config");
 const bcrypt = require("bcryptjs");
 const User = require("../../../models/user_test");
+const { cpf } = require("cpf-cnpj-validator");
+var emailValidator = require("email-validator");
 
 // @route    POST /api/users/create
 // @desc     Registrar usuário e obter token
@@ -19,8 +21,13 @@ exports.registrar_usuario = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { user_name, user_email, user_password } = req.body;
-  let userObject = { senha: user_password, nome: user_name, email: user_email };
+  const { user_name, user_email, user_password, user_cpf } = req.body;
+  let userObject = {
+    senha: user_password,
+    nome: user_name,
+    email: user_email,
+    cpf: user_cpf
+  };
 
   try {
     let user = await User.findOne({
@@ -61,15 +68,82 @@ exports.registrar_usuario = async (req, res) => {
 };
 
 // Middleware para verificar campos da Autenticação
-exports.validator_registrar = (req, res, next) => {
-  check("user_name", "Nome é obrigatório")
-    .not()
-    .isEmpty(),
-    check("user_email", "Por favor coloque um email válido").isEmail(),
-    check(
-      "user_password",
-      "Por favor coloque uma senha com 6 ou mais caracteres"
-    ).isLength({ min: 6 });
+exports.validator_registrar = async (req, res, next) => {
+  try {
+    const {
+      user_cpf,
+      user_email,
+      user_celular,
+      user_name,
+      user_date,
+      user_genre
+    } = req.body;
+
+    // ### VERIFICANDO SE ALGUM ELEMENTO ESTA VAZIO
+    // Verificando o CPF está vazio
+    if (!user_cpf)
+      res.status(400).json({ errorMessage: "Favor preencher o campo CPF" });
+
+    // Verificando o E-mail está vazio
+    if (!user_email)
+      res.status(400).json({ errorMessage: "Favor preencher o campo E-mail" });
+
+    // Verificando o Celular está vazio
+    if (!user_celular)
+      res.status(400).json({ errorMessage: "Favor preencher o campo Celular" });
+
+    // Verificando o Nome está vazio
+    if (!user_name)
+      res.status(400).json({ errorMessage: "Favor preencher o campo Nome" });
+
+    // Verificando o Celular está vazio
+    if (!user_celular)
+      res.status(400).json({ errorMessage: "Favor preencher o campo Celular" });
+
+    // Verificando a Data está vazia
+    if (!user_date)
+      res
+        .status(400)
+        .json({ errorMessage: "Favor preencher o campo Data de Nascimento" });
+
+    // Verificando o Gênero está vazio
+    if (!user_genre)
+      res.status(400).json({ errorMessage: "Favor preencher o campo Gênero" });
+
+    // ### VALIDADORES DE VERICIDADE/EXISTENCIA NO BANCO
+    // Validador de veracidade CPF
+    if (!cpf.isValid(user_cpf))
+      res.status(400).json({ errorMessage: "CPF inválido" });
+
+    // Validador de existência (DB) de CPF
+    const exisintgCpf = await User.findOne({
+      where: {
+        cpf: user_cpf
+      }
+    });
+    if (exisintgCpf)
+      res.status(400).json({ errorMessage: "CPF já cadastrado" });
+
+    // Validador de existência (DB) de Email
+    const exisintgEmail = await User.findOne({
+      where: {
+        email: user_email
+      }
+    });
+    if (exisintgEmail)
+      res.status(400).json({ errorMessage: "E-mail já cadastrado" });
+
+    // Validador de formato de e-mail
+    if (emailValidator.validate(user_email))
+      res.status(400).json({ errorMessage: "E-mail inválido" });
+
+    // Validador de existência (DB)
+  } catch (err) {
+    console.log(err);
+    res
+      .status(400)
+      .json({ errorMessage: "Erro de servidor", callback: err.message });
+  }
   next();
 };
 

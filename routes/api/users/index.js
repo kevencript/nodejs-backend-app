@@ -6,6 +6,7 @@
 
 const express = require("express");
 const router = express.Router();
+const Auth = require("../../../middleware/auth");
 
 // controller import
 const {
@@ -22,6 +23,6 @@ router.post("/create", [validator_registrar], registrar_usuario);
 // @route    GET /api/users/all
 // @desc     Retornar todos os usuários do banco
 // @acess    Private
-router.post("/all", retornar_todos_usuarios);
+router.post("/all", Auth, retornar_todos_usuarios);
 
 module.exports = router;

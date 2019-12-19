@@ -4,7 +4,7 @@ const bodyParser = require("body-parser");
 const config = require("config");
 
 //Conexão com Banco
-const UserTest = require("./models/user_test");
+require("./models/user_test");
 
 const app = express();
 
