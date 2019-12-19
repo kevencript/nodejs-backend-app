@@ -11,14 +11,31 @@ const config = require("config");
 const bcrypt = require("bcryptjs");
 const User = require("../../../models/user_test");
 const { cpf } = require("cpf-cnpj-validator");
-var emailValidator = require("email-validator");
+var passwordValidator = require("password-validator");
+var passValidate = new passwordValidator();
+
+// Add properties to it
+passValidate
+  .is()
+  .min(8) // Minimum length 8
+  .is()
+  .max(100) // Maximum length 100
+  .has()
+  .uppercase() // Must have uppercase letters
+  .has()
+  .lowercase() // Must have lowercase letters
+  .has()
+  .digits() // Must have digits
+  .has()
+  .not()
+  .spaces(); // Should not have spaces
 
 // @route    POST /api/users/create
 // @desc     Registrar usuário e obter token
 exports.registrar_usuario = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(422).json({ errors: errors.array() });
   }
 
   const { user_name, user_email, user_password, user_cpf } = req.body;
@@ -68,84 +85,83 @@ exports.registrar_usuario = async (req, res) => {
 };
 
 // Middleware para verificar campos da Autenticação
-exports.validator_registrar = async (req, res, next) => {
-  try {
-    const {
-      user_cpf,
-      user_email,
-      user_celular,
-      user_name,
-      user_date,
-      user_genre
-    } = req.body;
+exports.validator_registrar = [
+  // Chave de Segurança
+  check("chave_seguranca")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo Chave de Segurança")
+    .not()
+    .isString()
+    .withMessage("A chave de segurança só pode conter valores inteiros")
+    .isLength({ min: 4, max: 4 })
+    .withMessage("A chave de segurança deve conter especificamente 4 dígitos"),
 
-    // ### VERIFICANDO SE ALGUM ELEMENTO ESTA VAZIO
-    // Verificando o CPF está vazio
-    if (!user_cpf)
-      res.status(400).json({ errorMessage: "Favor preencher o campo CPF" });
+  // E-mail do usuário
+  check("user_email")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo E-mail")
+    .isEmail()
+    .withMessage("E-mail inválido")
+    .custom(user_email => {
+      return User.findOne({ where: { email: user_email } }).then(email => {
+        if (email) return Promise.reject("E-mail já cadastrado");
+      });
+    }),
 
-    // Verificando o E-mail está vazio
-    if (!user_email)
-      res.status(400).json({ errorMessage: "Favor preencher o campo E-mail" });
+  // Nome do usuário
+  check("user_name")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo Nome"),
 
-    // Verificando o Celular está vazio
-    if (!user_celular)
-      res.status(400).json({ errorMessage: "Favor preencher o campo Celular" });
+  // CPF do usuário
+  check("user_cpf")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo CPF")
+    // Validador de veracidade do CPF
+    .custom(user_cpf => {
+      const isValid = cpf.isValid(user_cpf);
+      if (!isValid) throw new Error("CPF inválido");
+      return true;
+    })
+    // Validador de existência no banco com o mesmo CPF
+    .custom(user_cpf => {
+      return User.findOne({ where: { cpf: user_cpf } }).then(user => {
+        if (user) return Promise.reject("CPF já cadastrado");
+      });
+    }),
 
-    // Verificando o Nome está vazio
-    if (!user_name)
-      res.status(400).json({ errorMessage: "Favor preencher o campo Nome" });
+  // Senha do usuário
+  check("user_password")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo Senha")
+    // Validador do padrão de senha
+    .custom(user_password => {
+      const isValid = passValidate.validate(user_password);
+      if (!isValid)
+        throw new Error(
+          "A senha deve conter pelo menos 8 caracteres, uma letra maiuscula, uma maiúscula e um número"
+        );
+      return true;
+    }),
+  // Gênero do usuário
+  check("user_genre")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo Gênero")
+    .isLength({ min: 1, max: 1 })
+    .withMessage("O campo Gênero só pode conter um caractere"),
 
-    // Verificando o Celular está vazio
-    if (!user_celular)
-      res.status(400).json({ errorMessage: "Favor preencher o campo Celular" });
-
-    // Verificando a Data está vazia
-    if (!user_date)
-      res
-        .status(400)
-        .json({ errorMessage: "Favor preencher o campo Data de Nascimento" });
-
-    // Verificando o Gênero está vazio
-    if (!user_genre)
-      res.status(400).json({ errorMessage: "Favor preencher o campo Gênero" });
-
-    // ### VALIDADORES DE VERICIDADE/EXISTENCIA NO BANCO
-    // Validador de veracidade CPF
-    if (!cpf.isValid(user_cpf))
-      res.status(400).json({ errorMessage: "CPF inválido" });
-
-    // Validador de existência (DB) de CPF
-    const exisintgCpf = await User.findOne({
-      where: {
-        cpf: user_cpf
-      }
-    });
-    if (exisintgCpf)
-      res.status(400).json({ errorMessage: "CPF já cadastrado" });
-
-    // Validador de existência (DB) de Email
-    const exisintgEmail = await User.findOne({
-      where: {
-        email: user_email
-      }
-    });
-    if (exisintgEmail)
-      res.status(400).json({ errorMessage: "E-mail já cadastrado" });
-
-    // Validador de formato de e-mail
-    if (emailValidator.validate(user_email))
-      res.status(400).json({ errorMessage: "E-mail inválido" });
-
-    // Validador de existência (DB)
-  } catch (err) {
-    console.log(err);
-    res
-      .status(400)
-      .json({ errorMessage: "Erro de servidor", callback: err.message });
-  }
-  next();
-};
+  // Data de aniversário do usuário
+  check("user_aniversario")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo Data de Aniversário")
+];
 
 // @route    GET /api/users/all
 // @desc     Retornar todos os usuários do banco

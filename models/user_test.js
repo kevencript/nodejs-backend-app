@@ -11,7 +11,8 @@ const sequelize = require("./index"); // ! Arquivo de conexão com banco
 const userTest = sequelize.define("user_test", {
   email: Sequelize.STRING,
   senha: Sequelize.STRING,
-  nome: Sequelize.STRING
+  nome: Sequelize.STRING,
+  cpf: Sequelize.STRING
 });
 
 userTest.sync({ force: false });
