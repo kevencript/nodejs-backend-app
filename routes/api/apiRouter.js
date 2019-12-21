@@ -10,8 +10,10 @@ const router = express.Router();
 
 // modules import
 const users = require("./users");
+const services = require("./services");
 
 // Routing
 router.use("/users", users);
+router.use("/services", services);
 
 module.exports = router;
