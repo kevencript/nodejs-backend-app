@@ -186,6 +186,7 @@ exports.validator_registrar = [
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo Data de Aniversário")
+    .isLength({ min: 10, max: 10 })
 ];
 
 // @route    GET /api/users/all
