@@ -7,10 +7,10 @@
  */
 
 if (process.env.NODE_ENV === "production") {
-  // Prodcution environment keys
+  // Chaves do ambiente de Produção
   module.exports = require("./prod");
 } else {
-  // Development environment keys
+  // Chaves do ambiente de Desenvolvimento
   // @caution! You should not commit this file to GitHub
   module.exports = require("./dev");
 }

@@ -7,7 +7,7 @@
 
 const { check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
-const config = require("config");
+const { jwtSecret } = require("../../../config/keys");
 const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
 const { cpf } = require("cpf-cnpj-validator");
 var passwordValidator = require("password-validator");
@@ -80,15 +80,10 @@ exports.registrar_usuario = async (req, res) => {
       }
     };
 
-    jwt.sign(
-      payload,
-      config.get("jwtSecret"),
-      { expiresIn: 3600 },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
-    );
+    jwt.sign(payload, jwtSecret, { expiresIn: 3600 }, (err, token) => {
+      if (err) throw err;
+      res.json({ token });
+    });
   } catch (err) {
     console.error(err);
     res

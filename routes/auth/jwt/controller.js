@@ -8,7 +8,7 @@
 
 const { check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
-const config = require("config");
+const { jwtSecret } = require("../../../config/keys");
 const { sys_users } = require("../../../sequelize/models/");
 
 const PasswordHash = require("node-phpass").PasswordHash;
@@ -55,15 +55,10 @@ exports.autenticar_usuario = async (req, res) => {
       }
     };
 
-    jwt.sign(
-      payload,
-      config.get("jwtSecret"),
-      { expiresIn: 360000 },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
-    );
+    jwt.sign(payload, jwtSecret, { expiresIn: 360000 }, (err, token) => {
+      if (err) throw err;
+      res.json({ token });
+    });
   } catch (err) {
     console.error(err);
     res
