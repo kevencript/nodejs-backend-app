@@ -1,9 +1,9 @@
 {
   "name": "backbeauty-api",
   "version": "1.0.0",
-  "main": "express_server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node express_server.js",
+    "start": "node index.js",
     "dev": "nodemon index.js"
   },
   "license": "MIT",
