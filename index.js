@@ -3,9 +3,6 @@ const Router = require("./routes/Router");
 const bodyParser = require("body-parser");
 const config = require("config");
 
-//Conexão com Banco
-require("./models/user_test");
-
 const app = express();
 
 app.use(bodyParser.json());

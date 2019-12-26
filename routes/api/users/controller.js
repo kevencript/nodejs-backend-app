@@ -8,11 +8,11 @@
 const { check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 const config = require("config");
-const bcrypt = require("bcryptjs");
-const User = require("../../../models/user_test");
+const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
 const { cpf } = require("cpf-cnpj-validator");
 var passwordValidator = require("password-validator");
 var passValidate = new passwordValidator();
+const { sys_users } = require("../../../sequelize/models");
 
 // Add properties to it
 passValidate
@@ -38,32 +38,45 @@ exports.registrar_usuario = async (req, res) => {
     return res.status(422).json({ errors: errors.array() });
   }
 
-  const { user_name, user_email, user_password, user_cpf } = req.body;
+  const {
+    nome,
+    email,
+    password,
+    user_cpf,
+    data_nascimento,
+    telefone
+  } = req.body;
+
   let userObject = {
-    senha: user_password,
-    nome: user_name,
-    email: user_email,
-    cpf: user_cpf
+    username: user_cpf,
+    nome,
+    password,
+    email,
+    activated: 0,
+    created: Date.now(),
+    data_json: {
+      telefone,
+      funcionario: 0,
+      termo_uso: 1,
+      data_nascimento
+    }
   };
 
   try {
-    let user = await User.findOne({
-      where: {
-        email: user_email
-      }
-    });
+    // Configs de criptografia
+    // Doc: https://github.com/glauberportella/password-hash
+    const len = 8;
+    const portable = true;
+    const phpversion = 7;
+    const hasher = new PasswordHash(len, portable, phpversion);
 
-    if (user) {
-      return res.status(400).json({ errorMessage: "Usuário já existe" });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    userObject.senha = await bcrypt.hash(user_password, salt);
-    let userResponse = await User.create(userObject);
+    // Gerando hash
+    userObject.password = await hasher.HashPassword(password, CRYPT_BLOWFISH);
+    let userCreated = await sys_users.create(userObject);
 
     const payload = {
       user: {
-        id: userResponse.id
+        id: userCreated.id
       }
     };
 
@@ -98,20 +111,20 @@ exports.validator_registrar = [
     .withMessage("A chave de segurança deve conter especificamente 4 dígitos"),
 
   // E-mail do usuário
-  check("user_email")
+  check("email")
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo E-mail")
     .isEmail()
     .withMessage("E-mail inválido")
-    .custom(user_email => {
-      return User.findOne({ where: { email: user_email } }).then(email => {
+    .custom(email => {
+      return sys_users.findOne({ where: { email: email } }).then(email => {
         if (email) return Promise.reject("E-mail já cadastrado");
       });
     }),
 
   // Nome do usuário
-  check("user_name")
+  check("nome")
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo Nome"),
@@ -129,19 +142,19 @@ exports.validator_registrar = [
     })
     // Validador de existência no banco com o mesmo CPF
     .custom(user_cpf => {
-      return User.findOne({ where: { cpf: user_cpf } }).then(user => {
+      return sys_users.findOne({ where: { username: user_cpf } }).then(user => {
         if (user) return Promise.reject("CPF já cadastrado");
       });
     }),
 
   // Senha do usuário
-  check("user_password")
+  check("password")
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo Senha")
     // Validador do padrão de senha
-    .custom(user_password => {
-      const isValid = passValidate.validate(user_password);
+    .custom(password => {
+      const isValid = passValidate.validate(password);
       if (!isValid)
         throw new Error(
           "A senha deve conter pelo menos 8 caracteres, uma letra maiuscula, uma maiúscula e um número"
@@ -149,15 +162,32 @@ exports.validator_registrar = [
       return true;
     }),
   // Gênero do usuário
-  check("user_genre")
+  check("genero")
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo Gênero")
     .isLength({ min: 1, max: 1 })
     .withMessage("O campo Gênero só pode conter um caractere"),
 
+  // Telefone
+  check("telefone")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo Telefone")
+    .custom(async user_telefone => {
+      const isValid = await sys_users.findOne({
+        where: {
+          data_json: {
+            telefone: user_telefone
+          }
+        }
+      });
+      if (isValid) throw new Error("Telefone já cadastrado");
+      return true;
+    }),
+
   // Data de aniversário do usuário
-  check("user_aniversario")
+  check("data_nascimento")
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo Data de Aniversário")
@@ -167,7 +197,7 @@ exports.validator_registrar = [
 // @desc     Retornar todos os usuários do banco
 exports.retornar_todos_usuarios = async (req, res) => {
   try {
-    const response = await User.findAll();
+    const response = await sys_users.findAll();
 
     if (!response) res.send("Nenhum registro encontrado");
 

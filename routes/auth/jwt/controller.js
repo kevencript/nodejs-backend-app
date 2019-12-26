@@ -9,8 +9,10 @@
 const { check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 const config = require("config");
-const bcrypt = require("bcryptjs");
-const User = require("../../../models/user_test");
+const { sys_users } = require("../../../sequelize/models/");
+
+const PasswordHash = require("node-phpass").PasswordHash;
+const Hasher = new PasswordHash(8, true, 7);
 
 // @route    POST /auth
 // @desc     Autenticar o usuário e obter token
@@ -20,12 +22,14 @@ exports.autenticar_usuario = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { user_email, user_password } = req.body;
+  // Extraindo informações da requisição
+  const { email, password } = req.body;
 
   try {
-    let user = await User.findOne({
+    // Buscando por usuário com e-mail existente
+    let user = await sys_users.findOne({
       where: {
-        email: user_email
+        email
       }
     });
 
@@ -35,7 +39,9 @@ exports.autenticar_usuario = async (req, res) => {
         .json({ errorMessage: "Email ou senha incorretos" });
     }
 
-    const isMatch = await bcrypt.compare(user_password, user.senha);
+    // Realizando a comparação das senhas criptografadas
+    const storedHash = user.password;
+    const isMatch = await Hasher.CheckPassword(password, storedHash);
 
     if (!isMatch) {
       return res
@@ -67,8 +73,7 @@ exports.autenticar_usuario = async (req, res) => {
 };
 
 // Middleware para verificar campos da Autenticação
-exports.validatorAuth = (req, res, next) => {
-  check("user_email", "Por favor coloque um email válido").isEmail(),
-    check("user_password", "A senha é obrigatória").exists();
-  next();
-};
+exports.validatorAuth = [
+  check("email", "Por favor coloque um email válido").isEmail(),
+  check("password", "A senha é obrigatória").exists()
+];

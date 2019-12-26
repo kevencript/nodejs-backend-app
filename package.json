@@ -10,11 +10,11 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "comtele-sdk": "^1.1.6",
-    "config": "^3.1.0",
     "cpf-cnpj-validator": "^0.1.0",
     "express": "^4.17.1",
     "express-validator": "^6.0.1",
     "jsonwebtoken": "^8.5.1",
+    "node-phpass": "^1.0.5",
     "nodemon": "^2.0.1",
     "password-validator": "^5.0.3",
     "pg": "^7.14.0",
