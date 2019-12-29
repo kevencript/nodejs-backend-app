@@ -10,8 +10,8 @@ const jwt = require("jsonwebtoken");
 const { jwtSecret } = require("../../../config/keys");
 const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
 const { cpf } = require("cpf-cnpj-validator");
-var passwordValidator = require("password-validator");
-var passValidate = new passwordValidator();
+const passwordValidator = require("password-validator");
+const passValidate = new passwordValidator();
 const { sys_users } = require("../../../sequelize/models");
 
 // Add properties to it
@@ -80,7 +80,7 @@ exports.registrar_usuario = async (req, res) => {
       }
     };
 
-    jwt.sign(payload, jwtSecret, { expiresIn: 3600 }, (err, token) => {
+    jwt.sign(payload, jwtSecret, { expiresIn: 36000 }, (err, token) => {
       if (err) throw err;
       res.json({ token });
     });
@@ -152,7 +152,7 @@ exports.validator_registrar = [
       const isValid = passValidate.validate(password);
       if (!isValid)
         throw new Error(
-          "A senha deve conter pelo menos 8 caracteres, uma letra maiuscula, uma maiúscula e um número"
+          "A senha deve conter pelo menos 8 caracteres, uma letra minúscula, uma maiúscula e um número"
         );
       return true;
     }),

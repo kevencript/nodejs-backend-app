@@ -15,14 +15,14 @@ const {
   retornar_todos_usuarios
 } = require("./controller");
 
-// @route    POST /api/users/create
-// @desc     Autenticar o usuário e obter token
+// @route    POST /api/users
+// @desc     Registrar usuário e obter token
 // @acess    Public
-router.post("/create", [validator_registrar], registrar_usuario);
+router.post("/", [validator_registrar], registrar_usuario);
 
 // @route    GET /api/users/all
 // @desc     Retornar todos os usuários do banco
 // @acess    Private
-router.post("/all", Auth, retornar_todos_usuarios);
+router.get("/all", Auth, retornar_todos_usuarios);
 
 module.exports = router;
