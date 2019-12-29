@@ -9,11 +9,11 @@ const router = express.Router();
 const Auth = require("../../../middleware/auth");
 
 // controller import
-const { sms_emitter, validator_sms_emitter } = require("./controller");
+const { gerar_pin } = require("./controller");
 
-// @route    POST /api/services/sms-emitter
-// @desc     Realizar o envio de SMS
+// @route    GET /api/services/gerar-pin
+// @desc     Gerar um novo PIN, atribuir ao perfil do usuário logado e enviar o código de confirmação via SMS
 // @acess    Private
-router.post("/sms-emitter", Auth, [validator_sms_emitter], sms_emitter);
+router.get("/gerar-pin", Auth, gerar_pin);
 
 module.exports = router;
