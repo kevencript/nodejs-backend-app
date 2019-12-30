@@ -17,8 +17,8 @@
   "test": {
     "database": "postgres",
     "username": "postgres",
-    "password": "1syiIc6Zw0iSVioEcwBK",
-    "host": "backbeauty-dev.cetv0no5tkzk.sa-east-1.rds.amazonaws.com",
+    "password": "0cUWlspaE7RFSJII1Rr2",
+    "host": "backbeauty-dev.czfcplao33sr.us-west-2.rds.amazonaws.com",
     "dialect": "postgres",
     "dialectOptions": {
       "timezone": ""
@@ -32,8 +32,8 @@
   "production": {
     "database": "postgres",
     "username": "postgres",
-    "password": "1syiIc6Zw0iSVioEcwBK",
-    "host": "backbeauty-dev.cetv0no5tkzk.sa-east-1.rds.amazonaws.com",
+    "password": "0cUWlspaE7RFSJII1Rr2",
+    "host": "backbeauty-dev.czfcplao33sr.us-west-2.rds.amazonaws.com",
     "dialect": "postgres",
     "dialectOptions": {
       "timezone": ""
