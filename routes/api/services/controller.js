@@ -117,6 +117,10 @@ exports.validatorGerarPin = [
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo Telefone")
+    .isLength({ min: 11, max: 11 })
+    .withMessage(
+      "Você deve digitar um valor com no máximo 11 digitos (DDD+Telefone)"
+    )
     .custom(async user_telefone => {
       const isValid = await sys_users.findOne({
         where: {
