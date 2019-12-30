@@ -30,7 +30,7 @@ exports.gerar_pin = async (req, res) => {
 
     // Verificando se o usuário já foi verificado
     if (loggedUser.activated === 1)
-      res.status(400).json({
+      return res.status(400).json({
         errorMessage:
           "Usuários já verificados não podem gerar novos códigos PIN"
       });
@@ -75,7 +75,7 @@ exports.gerar_pin = async (req, res) => {
         }
       );
 
-      return res.send({ successMessage: "PIN gerado com sucesso" });
+      return res.json({ successMessage: "PIN gerado com sucesso" });
     }
 
     // Caso seja a primeira vez emitindo PIN
@@ -201,7 +201,7 @@ exports.validar_pin = async (req, res) => {
   const isExpirado = duration.asMinutes();
 
   if (isExpirado >= 30) {
-    res.status(400).json({
+    return res.status(400).json({
       errorMessage:
         "Você demorou mais de 30 minutos para validar um PIN, é necessário gerar outro para continuar"
     });
@@ -218,7 +218,7 @@ exports.validar_pin = async (req, res) => {
     });
 
     if (isValid)
-      res.status(400).json({
+      return res.status(400).json({
         errorMessage:
           "Telefone já cadastrado, gere um novo PIN com um número de telefone válido"
       });
@@ -236,8 +236,8 @@ exports.validar_pin = async (req, res) => {
       { where: { id_sysusers: req.user.id } }
     );
 
-    res.json({ successMessage: "PIN validado com sucesso!" });
+    return res.json({ successMessage: "PIN validado com sucesso!" });
   } else {
-    res.status(400).json({ errorMessage: "Número de PIN incorreto" });
+    return res.status(400).json({ errorMessage: "Número de PIN incorreto" });
   }
 };
