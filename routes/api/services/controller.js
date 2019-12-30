@@ -117,6 +117,9 @@ exports.validatorGerarPin = [
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo Telefone")
+    .not()
+    .isString()
+    .withMessage("Você deve digitar somente números inteiro")
     .isLength({ min: 11, max: 11 })
     .withMessage(
       "Você deve digitar um valor com no máximo 11 digitos (DDD+Telefone)"
