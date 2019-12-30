@@ -38,14 +38,7 @@ exports.registrar_usuario = async (req, res) => {
     return res.status(422).json({ errors: errors.array() });
   }
 
-  const {
-    nome,
-    email,
-    password,
-    user_cpf,
-    data_nascimento,
-    telefone
-  } = req.body;
+  const { nome, email, password, user_cpf, data_nascimento } = req.body;
 
   let userObject = {
     username: user_cpf,
@@ -55,7 +48,6 @@ exports.registrar_usuario = async (req, res) => {
     activated: 0,
     created: Date.now(),
     data_json: {
-      telefone,
       funcionario: 0,
       termo_uso: 1,
       data_nascimento
@@ -76,7 +68,7 @@ exports.registrar_usuario = async (req, res) => {
 
     const payload = {
       user: {
-        id: userCreated.id
+        id: userCreated.id_sysusers
       }
     };
 
@@ -163,24 +155,6 @@ exports.validator_registrar = [
     .withMessage("Por favor, preencher o campo Gênero")
     .isLength({ min: 1, max: 1 })
     .withMessage("O campo Gênero só pode conter um caractere"),
-
-  // Telefone
-  check("telefone")
-    .not()
-    .isEmpty()
-    .withMessage("Por favor, preencher o campo Telefone")
-    .custom(async user_telefone => {
-      const isValid = await sys_users.findOne({
-        where: {
-          data_json: {
-            telefone: user_telefone
-          }
-        }
-      });
-      if (isValid) throw new Error("Telefone já cadastrado");
-      return true;
-    }),
-
   // Data de aniversário do usuário
   check("data_nascimento")
     .not()
