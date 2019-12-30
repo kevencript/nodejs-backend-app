@@ -9,7 +9,12 @@ const router = express.Router();
 const Auth = require("../../../middleware/auth");
 
 // controller import
-const { gerar_pin, validatorGerarPin, validar_pin } = require("./controller");
+const {
+  gerar_pin,
+  validatorGerarPin,
+  validatorValidarPin,
+  validar_pin
+} = require("./controller");
 
 // @route    POST /api/services/gerar-pin
 // @desc     Gerar um novo PIN, atribuir ao perfil do usuário logado e enviar o código de confirmação via SMS
@@ -19,6 +24,6 @@ router.post("/gerar-pin", Auth, validatorGerarPin, gerar_pin);
 // @route    POST /api/services/validar-pin
 // @desc     Validar um PIN e alterar o tipo de conta para "activated:1"
 // @acess    Private
-router.post("/validar-pin", Auth, validar_pin);
+router.post("/validar-pin", Auth, validatorValidarPin, validar_pin);
 
 module.exports = router;

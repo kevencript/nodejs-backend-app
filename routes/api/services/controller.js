@@ -130,6 +130,21 @@ exports.validatorGerarPin = [
     })
 ];
 
+// MIDDLEWARE
+// @route   /api/services/validar-pin
+exports.validatorValidarPin = [
+  // Telefone
+  check("codigo_para_verificar")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo Codigo para Verificar")
+    .not()
+    .isString()
+    .withMessage("Você deve digitar somente números inteiro")
+    .isLength({ min: 4, max: 4 })
+    .withMessage("Você deve digitar um valor com no máximo 4 digitos")
+];
+
 // @route    POST /api/services/validar-pin
 // @desc     Validar um PIN e alterar o tipo de conta para "activated:1"
 exports.validar_pin = async (req, res) => {
