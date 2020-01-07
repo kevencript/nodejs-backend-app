@@ -84,7 +84,8 @@ exports.registrar_usuario = async (req, res) => {
   }
 };
 
-// Middleware para verificar campos da Autenticação
+// @type     Middleware de validação dos campos
+// @route    POST /api/users
 exports.validator_registrar = [
   // Chave de Segurança
   check("chave_seguranca")
@@ -179,3 +180,32 @@ exports.retornar_todos_usuarios = async (req, res) => {
       .json({ errorMessage: "Erro de servidor", callback: err.message });
   }
 };
+
+// @route    POST /api/users/interesses
+// @desc     Adicionar novos interesses para o usuário
+exports.adicionar_interesses = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  const { list_ids } = req.body;
+
+  // Retornando dados do usuário autenticado
+  const loggedUser = await sys_users.findOne({
+    where: {
+      id_sysusers: req.user.id
+    }
+  });
+
+  const { data_json } = loggedUser;
+};
+
+// @type     Middleware de validação dos campos
+// @route    POST /api/users
+exports.validatorAdicionarInteresses = [
+  check("lista_ids")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo Lista de ID's")
+];

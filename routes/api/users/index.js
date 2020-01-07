@@ -12,7 +12,9 @@ const Auth = require("../../../middleware/auth");
 const {
   validator_registrar,
   registrar_usuario,
-  retornar_todos_usuarios
+  retornar_todos_usuarios,
+  adicionar_interesses,
+  validatorAdicionarInteresses
 } = require("./controller");
 
 // @route    POST /api/users
@@ -24,5 +26,15 @@ router.post("/", [validator_registrar], registrar_usuario);
 // @desc     Retornar todos os usuários do banco
 // @acess    Private
 router.get("/all", Auth, retornar_todos_usuarios);
+
+// @route    POST /api/users/interesses
+// @desc     Adicionar novos interesses para o usuário
+// @acess    Private
+router.post(
+  "/interesses",
+  Auth,
+  [validatorAdicionarInteresses],
+  adicionar_interesses
+);
 
 module.exports = router;

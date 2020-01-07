@@ -125,14 +125,14 @@ exports.validatorGerarPin = [
       "Você deve digitar um valor com no máximo 11 digitos (DDD+Telefone)"
     )
     .custom(async user_telefone => {
-      const isValid = await sys_users.findOne({
+      const isExting = await sys_users.findOne({
         where: {
           data_json: {
             telefone: user_telefone
           }
         }
       });
-      if (isValid) throw new Error("Telefone já cadastrado");
+      if (isExting) throw new Error("Telefone já cadastrado");
       return true;
     })
 ];
@@ -177,6 +177,7 @@ exports.validar_pin = async (req, res) => {
 
   // Acessando objeto JSON dentro do usuário logado
   let { data_json } = loggedUser;
+
   const hasPinValidator = data_json.pin_validator
     ? data_json.pin_validator
     : false;
