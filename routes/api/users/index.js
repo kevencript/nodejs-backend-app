@@ -14,8 +14,12 @@ const {
   registrar_usuario,
   retornar_todos_usuarios,
   adicionar_interesses,
-  validatorAdicionarInteresses
+  validatorAdicionarInteresses,
+  imagem_perfil
 } = require("./controller");
+
+// utilitarios
+const { imageUpload } = require("../../../utilitarios/imageUpload");
 
 // @route    POST /api/users
 // @desc     Registrar usuário e obter token
@@ -26,6 +30,11 @@ router.post("/", [validator_registrar], registrar_usuario);
 // @desc     Retornar todos os usuários do banco
 // @acess    Private
 router.get("/all", Auth, retornar_todos_usuarios);
+
+// @route    POST /api/users/imagem_perfil
+// @desc     Editar/definir foto de perfil do usuário
+// @acess    Private
+router.post("/imagem_perfil", Auth, imageUpload, imagem_perfil);
 
 // @route    POST /api/users/interesses
 // @desc     Adicionar novos interesses para o usuário

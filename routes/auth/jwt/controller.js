@@ -51,7 +51,8 @@ exports.autenticar_usuario = async (req, res) => {
 
     const payload = {
       user: {
-        id: user.id_sysusers
+        id: user.id_sysusers,
+        activated: user.activated
       }
     };
 

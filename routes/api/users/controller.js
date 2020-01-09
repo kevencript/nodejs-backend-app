@@ -68,7 +68,8 @@ exports.registrar_usuario = async (req, res) => {
 
     const payload = {
       user: {
-        id: userCreated.id_sysusers
+        id: userCreated.id_sysusers,
+        activated: userCreated.activated
       }
     };
 
@@ -209,3 +210,32 @@ exports.validatorAdicionarInteresses = [
     .isEmpty()
     .withMessage("Por favor, preencher o campo Lista de ID's")
 ];
+
+// @route    POST /api/users/imagem_perfil
+// @desc     Editar/definir foto de perfil do usuário
+exports.imagem_perfil = async (req, res) => {
+  // Retornando URL
+  const { imageUrl } = req;
+
+  try {
+    // Alterando imagem no perfil do usuário
+    await sys_users.update(
+      { foto: imageUrl },
+      {
+        where: {
+          id_sysusers: req.user.id
+        }
+      }
+    );
+
+    res.json({
+      successMessage: "Imagem do perfil definida com sucesso"
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({
+      errorMessage: "Erro ao alterar dado no banco",
+      callback: err.message
+    });
+  }
+};

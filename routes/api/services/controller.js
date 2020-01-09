@@ -6,8 +6,13 @@
  *
  */
 
-const { check, validationResult } = require("express-validator");
 const moment = require("moment");
+const aws = require("aws-sdk");
+const multer = require("multer");
+const multerS3 = require("multer-s3");
+const config = require("../../../config/keys");
+
+const { check, validationResult } = require("express-validator");
 const { sys_users } = require("../../../sequelize/models");
 
 // @route    POST /api/services/gerar-pin
@@ -239,6 +244,8 @@ exports.validar_pin = async (req, res) => {
 
     return res.json({ successMessage: "PIN validado com sucesso!" });
   } else {
-    return res.status(400).json({ errorMessage: "Número de PIN incorreto" });
+    return res
+      .status(400)
+      .json({ errors: [{ msg: "Número de PIN incorreto" }] });
   }
 };
