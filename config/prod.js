@@ -15,5 +15,9 @@ module.exports = {
   aws: {
     secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS,
     accessKeyId: process.env.ACCESS_KEY_ID_AWS
+  },
+  mex10: {
+    user: process.env.MEX10_USER,
+    password: process.env.MEX10_PASSWORD
   }
 };

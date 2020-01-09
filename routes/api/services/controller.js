@@ -7,11 +7,7 @@
  */
 
 const moment = require("moment");
-const aws = require("aws-sdk");
-const multer = require("multer");
-const multerS3 = require("multer-s3");
-const config = require("../../../config/keys");
-
+const { enviarSms } = require("../../../utilitarios/enviarSms");
 const { check, validationResult } = require("express-validator");
 const { sys_users } = require("../../../sequelize/models");
 
@@ -85,6 +81,12 @@ exports.gerar_pin = async (req, res) => {
         }
       );
 
+      const messageSms =
+        "Codigo de verificacao Backbeauty: " + codigoConfirmacao;
+
+      // Enviando SMS
+      await enviarSms(numero_telefone_temp, messageSms);
+
       return res.json({ successMessage: "PIN gerado com sucesso" });
     }
 
@@ -108,6 +110,11 @@ exports.gerar_pin = async (req, res) => {
         }
       }
     );
+
+    const messageSms = "Codigo de verificacao Backbeauty: " + codigoConfirmacao;
+
+    // Enviando SMS
+    await enviarSms(numero_telefone, messageSms);
 
     res.json({ successMessage: "PIN gerado com sucesso" });
   } catch (error) {
