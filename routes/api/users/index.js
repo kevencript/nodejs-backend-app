@@ -15,7 +15,8 @@ const {
   retornar_todos_usuarios,
   adicionar_interesses,
   validatorAdicionarInteresses,
-  imagem_perfil
+  imagem_perfil,
+  retornar_interesses
 } = require("./controller");
 
 // utilitarios
@@ -45,5 +46,10 @@ router.post(
   [validatorAdicionarInteresses],
   adicionar_interesses
 );
+
+// @route    GET /api/users/interesses
+// @desc     Retornar todos os interesses
+// @acess    Private
+router.get("/interesses", Auth, retornar_interesses);
 
 module.exports = router;

@@ -12,7 +12,7 @@ const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
 const { cpf } = require("cpf-cnpj-validator");
 const passwordValidator = require("password-validator");
 const passValidate = new passwordValidator();
-const { sys_users } = require("../../../sequelize/models");
+const { sys_users, cad_interesses } = require("../../../sequelize/models");
 
 // Add properties to it
 passValidate
@@ -236,6 +236,21 @@ exports.imagem_perfil = async (req, res) => {
     res.status(400).json({
       errorMessage: "Erro ao alterar dado no banco",
       callback: err.message
+    });
+  }
+};
+
+// @route    GET /api/users/interesses
+// @desc     Retornar todos os interesses
+exports.retornar_interesses = async (req, res) => {
+  try {
+    const interesses = await cad_interesses.findAll();
+
+    res.send(interesses);
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({
+      errors: [{ msg: "Erro ao retornar interesses", callback: err.message }]
     });
   }
 };
