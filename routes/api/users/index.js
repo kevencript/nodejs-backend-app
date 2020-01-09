@@ -34,7 +34,7 @@ router.get("/all", Auth, retornar_todos_usuarios);
 // @route    POST /api/users/imagem_perfil
 // @desc     Editar/definir foto de perfil do usuário
 // @acess    Private
-router.post("/imagem_perfil", Auth, imageUpload, imagem_perfil);
+router.post("/imagem-perfil", Auth, imageUpload, imagem_perfil);
 
 // @route    POST /api/users/interesses
 // @desc     Adicionar novos interesses para o usuário

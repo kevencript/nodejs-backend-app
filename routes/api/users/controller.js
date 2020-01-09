@@ -211,7 +211,7 @@ exports.validatorAdicionarInteresses = [
     .withMessage("Por favor, preencher o campo Lista de ID's")
 ];
 
-// @route    POST /api/users/imagem_perfil
+// @route    POST /api/users/imagem-perfil
 // @desc     Editar/definir foto de perfil do usuário
 exports.imagem_perfil = async (req, res) => {
   // Retornando URL
