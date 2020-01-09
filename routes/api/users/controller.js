@@ -12,7 +12,11 @@ const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
 const { cpf } = require("cpf-cnpj-validator");
 const passwordValidator = require("password-validator");
 const passValidate = new passwordValidator();
-const { sys_users, cad_interesses } = require("../../../sequelize/models");
+const {
+  sys_users,
+  cad_interesses,
+  interesses_usuarios
+} = require("../../../sequelize/models");
 
 // Add properties to it
 passValidate
@@ -190,22 +194,66 @@ exports.adicionar_interesses = async (req, res) => {
     return res.status(422).json({ errors: errors.array() });
   }
 
-  const { list_ids } = req.body;
+  try {
+    const loggedUser = await sys_users.findOne({
+      where: {
+        id_sysusers: req.user.id
+      }
+    });
 
-  // Retornando dados do usuário autenticado
-  const loggedUser = await sys_users.findOne({
-    where: {
-      id_sysusers: req.user.id
-    }
-  });
+    //
+    const { id_sysusers } = loggedUser;
+    const { list_ids } = req.body;
 
-  const { data_json } = loggedUser;
+    // Percorrendo ID`s e montando um objeto para ser inserido
+
+    await list_ids.map(async id_interesse => {
+      try {
+        const acctuallyExists = await interesses_usuarios.findOne({
+          where: {
+            id_sysusers,
+            id_interesse
+          }
+        });
+
+        // Caso já tenha vinculado esse interesse a algum usuário
+        if (acctuallyExists) return;
+
+        // Preparando objeto que será inserido
+        const insertObject = {
+          id_interesse,
+          id_sysusers
+        };
+
+        await interesses_usuarios.create(insertObject);
+      } catch (err) {
+        console.log(err);
+        return res.status(400).json({
+          errors: [
+            {
+              msg: "Erro ao vincular interesse ao usuário",
+              callback: err.message
+            }
+          ]
+        });
+      }
+    });
+
+    res.send({ successMessage: "Interesses inseridos com sucesso!" });
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({
+      errors: [
+        { msg: "Erro ao vincular interesse ao usuário", callback: err.message }
+      ]
+    });
+  }
 };
 
 // @type     Middleware de validação dos campos
 // @route    POST /api/users
 exports.validatorAdicionarInteresses = [
-  check("lista_ids")
+  check("list_ids")
     .not()
     .isEmpty()
     .withMessage("Por favor, preencher o campo Lista de ID's")

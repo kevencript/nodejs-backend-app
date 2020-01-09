@@ -1,18 +1,18 @@
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
-  const sys_users = sequelize.define(
+  const cad_interesses = sequelize.define(
     "cad_interesses",
     {
-      id_Interesse: {
+      id_interesse: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
       },
-      DescInteresse: DataTypes.STRING
+      desc_interesse: DataTypes.STRING
     },
     { force: false }
   );
-  sys_users.associate = function(models) {};
-  return sys_users;
+  cad_interesses.associate = function(models) {};
+  return cad_interesses;
 };
