@@ -36,7 +36,7 @@ exports.autenticar_usuario = async (req, res) => {
     if (!user) {
       return res
         .status(400)
-        .json({ errorMessage: "Email ou senha incorretos" });
+        .json({ errors: [{ msg: "Email ou senha incorretos" }] });
     }
 
     // Realizando a comparação das senhas criptografadas
@@ -46,7 +46,7 @@ exports.autenticar_usuario = async (req, res) => {
     if (!isMatch) {
       return res
         .status(400)
-        .json({ errorMessage: "Email ou senha incorretos" });
+        .json({ errors: [{ msg: "Email ou senha incorretos" }] });
     }
 
     const payload = {
@@ -62,9 +62,9 @@ exports.autenticar_usuario = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ errorMessage: "Erro de servidor", callback: err.message });
+    res.status(500).json({
+      errors: [{ msg: "Erro de servidor", callback: err.message }]
+    });
   }
 };
 

@@ -79,9 +79,9 @@ exports.registrar_usuario = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ errorMessage: "Erro de servidor", callback: err.message });
+    res.status(500).json({
+      errors: [{ msg: "Erro de servidor", callback: err.message }]
+    });
   }
 };
 
@@ -176,9 +176,9 @@ exports.retornar_todos_usuarios = async (req, res) => {
     res.send(response);
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ errorMessage: "Erro de servidor", callback: err.message });
+    res.status(500).json({
+      errors: [{ msg: "Erro de servidor", callback: err.message }]
+    });
   }
 };
 
@@ -234,8 +234,7 @@ exports.imagem_perfil = async (req, res) => {
   } catch (err) {
     console.log(err);
     res.status(400).json({
-      errorMessage: "Erro ao alterar dado no banco",
-      callback: err.message
+      errors: [{ msg: "Erro ao alterar dado no banco", callback: err.message }]
     });
   }
 };
