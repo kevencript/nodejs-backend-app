@@ -1,3 +1,10 @@
+/**
+ * utilitarios/enviarSms.js
+ *
+ * @description: Função para enviar SMS
+ *
+ */
+
 const request = require("request");
 const config = require("../config/keys");
 
