@@ -1,8 +1,8 @@
 /**
  * middleware/basicAuth.js
  *
- * @description: A autenticação PADRÃO obriga que o usuário tenha validado telefone
- * e seja considerado um usuário ativo ("activated":1)
+ * @description: A autenticação BÁSICA não necessita que o usuário tenha validado telefone
+ * e seja considerado um usuário ativo ("activated":0)
  */
 
 const jwt = require("jsonwebtoken");
@@ -20,12 +20,6 @@ module.exports = function(req, res, next) {
   // Verify token
   try {
     const decoded = jwt.verify(token, jwtSecret);
-
-    if (decoded.user.activated === 0) {
-      return res
-        .status(401)
-        .json({ msg: "Usuário não foi ativado, autorização negada" });
-    }
 
     req.user = decoded.user;
     next();

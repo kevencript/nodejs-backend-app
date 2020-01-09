@@ -2,11 +2,13 @@
  * routes/api/users/index.js
  *
  * @description: Esse arquivo contem as rotas relacionadas ao usuário
+ *
  */
 
 const express = require("express");
 const router = express.Router();
 const Auth = require("../../../middleware/auth");
+const basicAuth = require("../../../middleware/basicAuth");
 
 // controller import
 const {
@@ -43,13 +45,13 @@ router.post("/imagem-perfil", Auth, imageUpload, imagem_perfil);
 router.post(
   "/interesses",
   Auth,
-  [validatorAdicionarInteresses],
+  validatorAdicionarInteresses,
   adicionar_interesses
 );
 
 // @route    GET /api/users/interesses
 // @desc     Retornar todos os interesses
 // @acess    Private
-router.get("/interesses", Auth, retornar_interesses);
+router.get("/interesses", basicAuth, retornar_interesses);
 
 module.exports = router;
