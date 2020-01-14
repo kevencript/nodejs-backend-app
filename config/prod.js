@@ -13,8 +13,14 @@ module.exports = {
   db_passsword: process.env.DATABASE_PASSWORD,
   db_host: process.env.DATABASE_HOST,
   aws: {
-    secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS,
-    accessKeyId: process.env.ACCESS_KEY_ID_AWS
+    s3: {
+      secretAccessKey: process.env.S3_SECRET_KEY_AWS,
+      accessKeyId: process.env.S3_ACCESS_KEY_AWS
+    },
+    ses: {
+      secretAccessKey: process.env.SES_SECRET_KEY_AWS,
+      accessKeyId: process.env.SES_ACCESS_KEY_AWS
+    }
   },
   mex10: {
     user: process.env.MEX10_USER,
