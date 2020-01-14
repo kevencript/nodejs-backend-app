@@ -5,7 +5,7 @@ const config = require("../config/keys");
 
 // Essa função deve ser passada como Middleware
 exports.imageUpload = async (req, res, next) => {
-  const { secretAccessKey, accessKeyId } = config.aws;
+  const { secretAccessKey, accessKeyId } = config.aws.s3;
 
   // Definições do Bucket
   const region = "us-west-2";
@@ -57,7 +57,8 @@ exports.imageUpload = async (req, res, next) => {
           errors: [
             {
               msg:
-                "Erro ao realziar upload de imagem. Verifiquer o tamanho ou se o campo encontra-se preenchido"
+                "Erro ao realizar upload de imagem. Verifiquer o tamanho ou se o campo encontra-se preenchido",
+              callback: err.message
             }
           ]
         });
