@@ -18,7 +18,9 @@ const {
   adicionar_interesses,
   validatorAdicionarInteresses,
   imagem_perfil,
-  retornar_interesses
+  retornar_interesses,
+  esqueceu_senha,
+  validatorEsqueceuSenha
 } = require("./controller");
 
 // utilitarios
@@ -32,7 +34,7 @@ router.post("/", [validator_registrar], registrar_usuario);
 // @route    GET /api/users/all
 // @desc     Retornar todos os usuários do banco
 // @acess    Private
-router.get("/all", Auth, retornar_todos_usuarios);
+router.get("/", Auth, retornar_todos_usuarios);
 
 // @route    POST /api/users/imagem_perfil
 // @desc     Editar/definir foto de perfil do usuário
@@ -53,5 +55,10 @@ router.post(
 // @desc     Retornar todos os interesses
 // @acess    Private
 router.get("/interesses", basicAuth, retornar_interesses);
+
+// @route    POST /api/users/esqueceu-senha
+// @desc     Realizar procedimento caso o usuário equeça a senha
+// @acess    Public
+router.post("/esqueceu-senha", validatorEsqueceuSenha, esqueceu_senha);
 
 module.exports = router;

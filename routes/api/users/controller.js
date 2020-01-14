@@ -5,13 +5,17 @@
  *
  */
 
-const { check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
-const { jwtSecret } = require("../../../config/keys");
-const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
-const { cpf } = require("cpf-cnpj-validator");
 const passwordValidator = require("password-validator");
 const passValidate = new passwordValidator();
+const moment = require("moment");
+const uuidv4 = require("uuid/v4");
+const { cpf } = require("cpf-cnpj-validator");
+const { check, validationResult } = require("express-validator");
+const { jwtSecret } = require("../../../config/keys");
+const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
+const { enviarEmail } = require("../../../utilitarios/enviarEmail");
+
 const {
   sys_users,
   cad_interesses,
@@ -298,6 +302,98 @@ exports.retornar_interesses = async (req, res) => {
     console.log(err);
     res.status(400).json({
       errors: [{ msg: "Erro ao retornar interesses", callback: err.message }]
+    });
+  }
+};
+
+// @type     Middleware de validação dos campos
+// @route    POST /api/users/esqueceu-senha
+exports.validatorEsqueceuSenha = [
+  check("email")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo E-mail")
+    .isEmail()
+    .withMessage("E-mail inválido")
+];
+
+// @route    POST /api/users/esqueceu-senha
+// @desc     Realizar procedimento caso o usuário equeça a senha
+exports.esqueceu_senha = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  const { email } = req.body;
+
+  try {
+    // Buscando usuário pelo email
+    const user = await sys_users.findOne({
+      where: {
+        email
+      }
+    });
+
+    // Verificando existencia de usuário
+    if (!user) {
+      res.status(400).json({
+        errors: [{ msg: "Não encontramos nenhum usuário com esse e-mail" }]
+      });
+    }
+
+    // Verificando se o usuário solicitou a recuperação senha a menos de 5 minutos
+    if (user.new_password_requested) {
+      const now = moment(new Date());
+      const past = moment(user.new_password_requested);
+      const duration = moment.duration(now.diff(past));
+
+      // Verificando se o PIN está expirado
+      const minutosDeDiferença = duration.asMinutes();
+
+      if (minutosDeDiferença < 5) {
+        return res.status(400).json({
+          errors: [
+            {
+              msg:
+                "Você deve esperar no mínimo 5 minutos para solicitar uma nova recuperação de senha"
+            }
+          ]
+        });
+      }
+    }
+
+    const uuidSolicitacao = await uuidv4();
+    const uuidUsuario = user.uuid_sysusers;
+
+    await enviarEmail(
+      "kevencript@gmail.com",
+      "<h1> Olá! Estamos testando. </h1>",
+      "Olá, Estamos testando.",
+      "Produtos Backbeauty"
+    );
+
+    // Realizando update no banco com a Key para trocar de senha e atualizando a data de envio
+    await sys_users.update(
+      {
+        new_password_key: uuidSolicitacao,
+        new_password_requested: moment(new Date())
+      },
+      {
+        where: {
+          uuid_sysusers: uuidUsuario
+        }
+      }
+    );
+
+    res.send({
+      successMessage:
+        "Solicitação de recuperação de senha realizada com sucesso"
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({
+      errors: [{ msg: "Erro no sistema", callback: err.message }]
     });
   }
 };

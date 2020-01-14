@@ -19,6 +19,8 @@ module.exports = (sequelize, DataTypes) => {
       password: DataTypes.STRING,
       email: DataTypes.STRING,
       activated: DataTypes.TINYINT,
+      new_password_requested: DataTypes.DATE,
+      new_password_key: DataTypes.STRING,
       created: DataTypes.DATE,
       data_json: DataTypes.JSON,
       foto: DataTypes.STRING
