@@ -59,7 +59,8 @@ exports.imageUpload = async (req, res, next) => {
 
     // Realizando upload de fato e obtendo a URL
     await singleUpload(req, res, err => {
-      if (err || typeof req.file === "undefined")
+      if (err || typeof req.file === "undefined") {
+        console.log(err);
         return res.status(400).json({
           errors: [
             {
@@ -69,6 +70,7 @@ exports.imageUpload = async (req, res, next) => {
             }
           ]
         });
+      }
 
       req.imageUrl = req.file.location;
       next();
