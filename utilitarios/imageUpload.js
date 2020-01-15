@@ -1,3 +1,10 @@
+/**
+ * utilitarios/imageUpload.js
+ *
+ * @description: Middleware para realizar upload de fotos
+ *
+ */
+
 const aws = require("aws-sdk");
 const multer = require("multer");
 const multerS3 = require("multer-s3");
@@ -58,7 +65,7 @@ exports.imageUpload = async (req, res, next) => {
             {
               msg:
                 "Erro ao realizar upload de imagem. Verifiquer o tamanho ou se o campo encontra-se preenchido",
-              callback: err.message
+              callback: err
             }
           ]
         });

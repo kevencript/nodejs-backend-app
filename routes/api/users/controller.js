@@ -399,3 +399,44 @@ exports.esqueceu_senha = async (req, res) => {
     });
   }
 };
+
+// @route    POST /api/users/favoritar-estabelecimento
+// @desc     Rota utilizada para favoritar/desfavoritar um estabelecimento
+exports.favoritar_estabelecimento = async (req, res) => {
+  try {
+    // Definindo UUID do body
+    const uuid_estabelecimento = req.body.uuid_estabelecimento
+      ? req.body.uuid_estabelecimento
+      : false;
+
+    if (!uuid_estabelecimento) {
+      return res.status(400).json({
+        errors: [
+          {
+            msg: "Por favor, preencher o identificador do estabelecimento"
+          }
+        ]
+      });
+    }
+
+    // Validando UUID
+    const uuidV4Regex = /^[A-F\d]{8}-[A-F\d]{4}-4[A-F\d]{3}-[89AB][A-F\d]{3}-[A-F\d]{12}$/i;
+    const isValidV4UUID = uuid => uuidV4Regex.test(uuid);
+    if (!isValidV4UUID(uuid_estabelecimento)) {
+      return res.status(400).json({
+        errors: [
+          {
+            msg: "Identificador de estabelecimento inválido"
+          }
+        ]
+      });
+    }
+
+    const isFavoritado = null;
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({
+      errors: [{ msg: "Erro no sistema", callback: err.message }]
+    });
+  }
+};

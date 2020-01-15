@@ -20,7 +20,8 @@ const {
   imagem_perfil,
   retornar_interesses,
   esqueceu_senha,
-  validatorEsqueceuSenha
+  validatorEsqueceuSenha,
+  favoritar_estabelecimento
 } = require("./controller");
 
 // utilitarios
@@ -60,5 +61,10 @@ router.get("/interesses", basicAuth, retornar_interesses);
 // @desc     Realizar procedimento caso o usuário equeça a senha
 // @acess    Public
 router.post("/esqueceu-senha", validatorEsqueceuSenha, esqueceu_senha);
+
+// @route    POST /api/users/favoritar-estabelecimento
+// @desc     Rota utilizada para favoritar/desfavoritar um estabelecimento
+// @acess    Private
+router.post("/favoritar-estabelecimento", Auth, favoritar_estabelecimento);
 
 module.exports = router;
