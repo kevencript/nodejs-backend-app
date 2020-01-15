@@ -19,7 +19,7 @@ const { enviarEmail } = require("../../../utilitarios/enviarEmail");
 const {
   sys_users,
   cad_interesses,
-  interesses_usuarios
+  cad_interesses_usuarios
 } = require("../../../sequelize/models");
 
 // Add properties to it
@@ -76,7 +76,7 @@ exports.registrar_usuario = async (req, res) => {
 
     const payload = {
       user: {
-        id: userCreated.id_sysusers,
+        id: userCreated.uuid_sysusers,
         activated: userCreated.activated
       }
     };
@@ -201,7 +201,7 @@ exports.adicionar_interesses = async (req, res) => {
   try {
     const loggedUser = await sys_users.findOne({
       where: {
-        id_sysusers: req.user.id
+        uuid_sysusers: req.user.id
       }
     });
 
@@ -213,7 +213,7 @@ exports.adicionar_interesses = async (req, res) => {
 
     await list_ids.map(async id_interesse => {
       try {
-        const acctuallyExists = await interesses_usuarios.findOne({
+        const acctuallyExists = await cad_interesses_usuarios.findOne({
           where: {
             id_sysusers,
             id_interesse
@@ -229,7 +229,7 @@ exports.adicionar_interesses = async (req, res) => {
           id_sysusers
         };
 
-        await interesses_usuarios.create(insertObject);
+        await cad_interesses_usuarios.create(insertObject);
       } catch (err) {
         console.log(err);
         return res.status(400).json({
@@ -243,7 +243,9 @@ exports.adicionar_interesses = async (req, res) => {
       }
     });
 
-    res.send({ successMessage: "Interesses inseridos com sucesso!" });
+    res.send({
+      successMessage: "Interesses inseridos com sucesso!"
+    });
   } catch (err) {
     console.log(err);
     res.status(400).json({
@@ -275,7 +277,7 @@ exports.imagem_perfil = async (req, res) => {
       { foto: imageUrl },
       {
         where: {
-          id_sysusers: req.user.id
+          uuid_sysusers: req.user.id
         }
       }
     );

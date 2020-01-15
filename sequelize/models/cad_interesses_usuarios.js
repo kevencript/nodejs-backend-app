@@ -1,10 +1,10 @@
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
-  const interesses_usuarios = sequelize.define(
-    "interesses_usuarios",
+  const cad_interesses_usuarios = sequelize.define(
+    "cad_interesses_usuarios",
     {
-      id_interesses_usuarios: {
+      id_interesse_usuario: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
@@ -26,13 +26,13 @@ module.exports = (sequelize, DataTypes) => {
     },
     { force: false }
   );
-  interesses_usuarios.associate = function(models) {
-    interesses_usuarios.hasMany(models.sys_users, {
+  cad_interesses_usuarios.associate = function(models) {
+    cad_interesses_usuarios.hasMany(models.sys_users, {
       foreignKey: "id_sysusers"
     });
-    interesses_usuarios.hasMany(models.cad_interesses, {
+    cad_interesses_usuarios.hasMany(models.cad_interesses, {
       foreignKey: "id_interesse"
     });
   };
-  return interesses_usuarios;
+  return cad_interesses_usuarios;
 };

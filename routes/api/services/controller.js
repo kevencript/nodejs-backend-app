@@ -23,7 +23,7 @@ exports.gerar_pin = async (req, res) => {
     // Retornando dados do usuário autenticado
     const loggedUser = await sys_users.findOne({
       where: {
-        id_sysusers: req.user.id
+        uuid_sysusers: req.user.id
       }
     });
 
@@ -76,7 +76,7 @@ exports.gerar_pin = async (req, res) => {
         { data_json },
         {
           where: {
-            id_sysusers: req.user.id
+            uuid_sysusers: req.user.id
           }
         }
       );
@@ -106,7 +106,7 @@ exports.gerar_pin = async (req, res) => {
       { data_json },
       {
         where: {
-          id_sysusers: req.user.id
+          uuid_sysusers: req.user.id
         }
       }
     );
@@ -179,7 +179,7 @@ exports.validar_pin = async (req, res) => {
   // Retornando dados do usuário autenticado
   const loggedUser = await sys_users.findOne({
     where: {
-      id_sysusers: req.user.id
+      uuid_sysusers: req.user.id
     }
   });
 
@@ -263,7 +263,7 @@ exports.validar_pin = async (req, res) => {
         activated: 1,
         data_json
       },
-      { where: { id_sysusers: req.user.id } }
+      { where: { uuid_sysusers: req.user.id } }
     );
 
     return res.json({ successMessage: "PIN validado com sucesso!" });
