@@ -431,8 +431,6 @@ exports.favoritar_estabelecimento = async (req, res) => {
         ]
       });
     }
-
-    const isFavoritado = null;
   } catch (err) {
     console.log(err);
     res.status(400).json({
