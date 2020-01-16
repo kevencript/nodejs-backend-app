@@ -16,10 +16,12 @@ const { jwtSecret } = require("../../../config/keys");
 const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
 const { enviarEmail } = require("../../../utilitarios/enviarEmail");
 
+// models
 const {
   sys_users,
   cad_interesses,
-  cad_interesses_usuarios
+  cad_interesses_usuarios,
+  est_estabelecimentos_favoritos
 } = require("../../../sequelize/models");
 
 // Add properties to it
@@ -403,38 +405,62 @@ exports.esqueceu_senha = async (req, res) => {
 // @route    POST /api/users/favoritar-estabelecimento
 // @desc     Rota utilizada para favoritar/desfavoritar um estabelecimento
 exports.favoritar_estabelecimento = async (req, res) => {
+  const { id_estabelecimento } = req.body;
+
   try {
-    // Definindo UUID do body
-    const uuid_estabelecimento = req.body.uuid_estabelecimento
-      ? req.body.uuid_estabelecimento
-      : false;
+    // Retornando usuário por meio do UUID
+    const user = await sys_users.findOne({
+      where: {
+        uuid_sysusers: req.user.id
+      }
+    });
 
-    if (!uuid_estabelecimento) {
-      return res.status(400).json({
-        errors: [
-          {
-            msg: "Por favor, preencher o identificador do estabelecimento"
-          }
-        ]
+    // Retornando ID do usuário
+    const { id_sysusers } = user;
+
+    // Verificando se o estabelecimento já foi favoritado por esse usuário
+    const isFavoritado = await est_estabelecimentos_favoritos.findOne({
+      where: {
+        id_sysusers,
+        id_estabelecimento
+      }
+    });
+
+    // Caso seja, realizamos o procedimento de "desfavoritar"
+    if (isFavoritado) {
+      await est_estabelecimentos_favoritos.destroy({
+        where: {
+          id_sysusers,
+          id_estabelecimento
+        }
+      });
+
+      return res.send({
+        successMessage: "Estabelecimento desmarcado como favorito com sucesso"
       });
     }
 
-    // Validando UUID
-    const uuidV4Regex = /^[A-F\d]{8}-[A-F\d]{4}-4[A-F\d]{3}-[89AB][A-F\d]{3}-[A-F\d]{12}$/i;
-    const isValidV4UUID = uuid => uuidV4Regex.test(uuid);
-    if (!isValidV4UUID(uuid_estabelecimento)) {
-      return res.status(400).json({
-        errors: [
-          {
-            msg: "Identificador de estabelecimento inválido"
-          }
-        ]
-      });
-    }
+    // Caso ainda não tenha sido marcado, então "favoritamos"
+    const objectToInsert = {
+      id_sysusers,
+      id_estabelecimento,
+      dthoraregistro: moment(new Date())
+    };
+
+    await est_estabelecimentos_favoritos.create(objectToInsert);
+
+    res.send({
+      successMessage: "Estabelecimento marcado como favorito com sucesso"
+    });
   } catch (err) {
     console.log(err);
     res.status(400).json({
-      errors: [{ msg: "Erro no sistema", callback: err.message }]
+      errors: [
+        {
+          msg: "Erro ao marar/desmarcar estabelecimento como favorito",
+          callback: err.message
+        }
+      ]
     });
   }
 };

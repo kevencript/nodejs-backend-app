@@ -37,7 +37,7 @@ router.post("/", [validator_registrar], registrar_usuario);
 // @acess    Private
 router.get("/", Auth, retornar_todos_usuarios);
 
-// @route    POST /api/users/imagem_perfil
+// @route    POST /api/users/imagem-perfil
 // @desc     Editar/definir foto de perfil do usuário
 // @acess    Private
 router.post("/imagem-perfil", Auth, imageUpload, imagem_perfil);
