@@ -305,10 +305,10 @@ exports.retornar_categorias = async (req, res) => {
         // definindo objeto final
         const objetoFinal = {
           id_categoria,
-          nomeCategoria: desccategoria,
-          iconeCategoria: nomeicone,
+          nome_categoria: desccategoria,
+          icone_categoria: nomeicone,
           subcategorias: null,
-          totalLocais: null
+          total_locais: null
         };
 
         // Buscando subcategorias
@@ -335,7 +335,7 @@ exports.retornar_categorias = async (req, res) => {
         const countEstabelecimentos = await sequelize.query(query);
 
         // Definindo total de estabelecimentos no objetoFinal
-        objetoFinal.totalLocais =
+        objetoFinal.total_locais =
           countEstabelecimentos[0][0].total_estabelecimentos;
 
         return objetoFinal;
