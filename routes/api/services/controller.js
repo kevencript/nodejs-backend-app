@@ -308,7 +308,7 @@ exports.retornar_categorias = async (req, res) => {
           nome_categoria: desccategoria,
           icone_categoria: nomeicone,
           subcategorias: null,
-          total_locais: null
+          total_locais: 0
         };
 
         // Buscando subcategorias
@@ -335,8 +335,11 @@ exports.retornar_categorias = async (req, res) => {
         const countEstabelecimentos = await sequelize.query(query);
 
         // Definindo total de estabelecimentos no objetoFinal
-        objetoFinal.total_locais =
-          countEstabelecimentos[0][0].total_estabelecimentos;
+        objetoFinal.total_locais = parseInt(
+          countEstabelecimentos[0][0].total_estabelecimentos
+            ? countEstabelecimentos[0][0].total_estabelecimentos
+            : 0
+        );
 
         return objetoFinal;
       })
