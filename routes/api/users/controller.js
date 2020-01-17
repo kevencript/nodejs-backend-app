@@ -402,9 +402,28 @@ exports.esqueceu_senha = async (req, res) => {
   }
 };
 
+// @type     Middleware de validação dos campos
+// @route    POST /api/users/esqueceu-senha
+exports.validatorFavEstabelecimento = [
+  check("id_estabelecimento")
+    .not()
+    .isEmpty()
+    .withMessage(
+      "Por favor, preencher o campo identificador do estebelecimento"
+    )
+    .not()
+    .isString()
+    .withMessage("Identificador inválido")
+];
+
 // @route    POST /api/users/favoritar-estabelecimento
 // @desc     Rota utilizada para favoritar/desfavoritar um estabelecimento
 exports.favoritar_estabelecimento = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
   const { id_estabelecimento } = req.body;
 
   try {

@@ -21,7 +21,8 @@ const {
   retornar_interesses,
   esqueceu_senha,
   validatorEsqueceuSenha,
-  favoritar_estabelecimento
+  favoritar_estabelecimento,
+  validatorFavEstabelecimento
 } = require("./controller");
 
 // utilitarios
@@ -65,6 +66,11 @@ router.post("/esqueceu-senha", validatorEsqueceuSenha, esqueceu_senha);
 // @route    POST /api/users/favoritar-estabelecimento
 // @desc     Rota utilizada para favoritar/desfavoritar um estabelecimento
 // @acess    Private
-router.post("/favoritar-estabelecimento", Auth, favoritar_estabelecimento);
+router.post(
+  "/favoritar-estabelecimento",
+  Auth,
+  validatorFavEstabelecimento,
+  favoritar_estabelecimento
+);
 
 module.exports = router;

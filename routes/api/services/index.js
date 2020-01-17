@@ -7,13 +7,15 @@
 const express = require("express");
 const router = express.Router();
 const basicAuth = require("../../../middleware/basicAuth");
+const Auth = require("../../../middleware/auth");
 
 // controller import
 const {
   gerar_pin,
   validatorGerarPin,
   validatorValidarPin,
-  validar_pin
+  validar_pin,
+  retornar_categorias
 } = require("./controller");
 
 // @route    POST /api/services/gerar-pin
@@ -25,5 +27,10 @@ router.post("/gerar-pin", basicAuth, validatorGerarPin, gerar_pin);
 // @desc     Validar um PIN e alterar o tipo de conta para "activated:1"
 // @acess    Private
 router.post("/validar-pin", basicAuth, validatorValidarPin, validar_pin);
+
+// @route    GET /api/services/categorias
+// @desc     Retornar as categorias e os dados depedentes
+// @acess    Private
+router.get("/categorias", Auth, retornar_categorias);
 
 module.exports = router;

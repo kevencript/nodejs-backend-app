@@ -30,7 +30,7 @@ exports.imageUpload = async (req, res, next) => {
 
     // Verificando se a imagem é jpeg ou png
     const fileFilter = (req, file, cb) => {
-      if (file.mimetype === "image/jpeg" || file.mimetype) {
+      if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
         cb(null, true);
       } else {
         cb(new Error("Invalid Mime Type, only JPEG and PNG"), false);

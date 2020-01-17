@@ -9,7 +9,15 @@
 const moment = require("moment");
 const { enviarSms } = require("../../../utilitarios/enviarSms");
 const { check, validationResult } = require("express-validator");
-const { sys_users } = require("../../../sequelize/models");
+
+// models
+const {
+  sys_users,
+  cad_categorias,
+  cad_subcategorias,
+  est_estabelecimento_servicos,
+  sequelize
+} = require("../../../sequelize/models");
 
 // @route    POST /api/services/gerar-pin
 // @desc     Gerar um novo PIN, atribuir ao perfil do usuário logado e enviar o código de confirmação via SMS
@@ -176,100 +184,169 @@ exports.validar_pin = async (req, res) => {
     return res.status(422).json({ errors: errors.array() });
   }
 
-  // Retornando dados do usuário autenticado
-  const loggedUser = await sys_users.findOne({
-    where: {
-      uuid_sysusers: req.user.id
-    }
-  });
-
-  const { codigo_para_verificar } = req.body;
-
-  // Verificando se o usuário já foi verificado
-  if (loggedUser.activated === 1)
-    return res.status(400).json({
-      errors: [
-        { msg: "Usuários já verificados não podem gerar novos códigos PIN" }
-      ]
-    });
-
-  // Acessando objeto JSON dentro do usuário logado
-  let { data_json } = loggedUser;
-
-  const hasPinValidator = data_json.pin_validator
-    ? data_json.pin_validator
-    : false;
-
-  if (!hasPinValidator)
-    return res.status(400).json({
-      errors: [
-        {
-          msg: "É necessário gerar um código de PIN antes de tentar valida-lo"
-        }
-      ]
-    });
-
-  const {
-    dt_envio,
-    codigo_verificacao,
-    numero_telefone_temp
-  } = data_json.pin_validator;
-
-  const now = moment(new Date());
-  const past = moment(dt_envio);
-  const duration = moment.duration(now.diff(past));
-
-  // Verificando se o PIN está expirado
-  const isExpirado = duration.asMinutes();
-
-  if (isExpirado >= 30) {
-    return res.status(400).json({
-      errors: [
-        {
-          msg:
-            "Você demorou mais de 30 minutos para validar um PIN, é necessário gerar outro para continuar"
-        }
-      ]
-    });
-  }
-
-  // Verificando se o código está correto
-  if (codigo_verificacao === codigo_para_verificar) {
-    const isValid = await sys_users.findOne({
+  try {
+    // Retornando dados do usuário autenticado
+    const loggedUser = await sys_users.findOne({
       where: {
-        data_json: {
-          telefone: numero_telefone_temp
-        }
+        uuid_sysusers: req.user.id
       }
     });
 
-    if (isValid)
+    const { codigo_para_verificar } = req.body;
+
+    // Verificando se o usuário já foi verificado
+    if (loggedUser.activated === 1)
+      return res.status(400).json({
+        errors: [
+          { msg: "Usuários já verificados não podem gerar novos códigos PIN" }
+        ]
+      });
+
+    // Acessando objeto JSON dentro do usuário logado
+    let { data_json } = loggedUser;
+
+    const hasPinValidator = data_json.pin_validator
+      ? data_json.pin_validator
+      : false;
+
+    if (!hasPinValidator)
       return res.status(400).json({
         errors: [
           {
-            msg:
-              "Telefone já cadastrado, gere um novo PIN com um número de telefone válido"
+            msg: "É necessário gerar um código de PIN antes de tentar valida-lo"
           }
         ]
       });
 
-    data_json.telefone = numero_telefone_temp;
+    const {
+      dt_envio,
+      codigo_verificacao,
+      numero_telefone_temp
+    } = data_json.pin_validator;
 
-    await delete data_json.pin_validator;
+    const now = moment(new Date());
+    const past = moment(dt_envio);
+    const duration = moment.duration(now.diff(past));
 
-    // Ativando conta e alterando data_json (removendo o pin_validator)
-    await sys_users.update(
-      {
-        activated: 1,
-        data_json
-      },
-      { where: { uuid_sysusers: req.user.id } }
+    // Verificando se o PIN está expirado
+    const isExpirado = duration.asMinutes();
+
+    if (isExpirado >= 30) {
+      return res.status(400).json({
+        errors: [
+          {
+            msg:
+              "Você demorou mais de 30 minutos para validar um PIN, é necessário gerar outro para continuar"
+          }
+        ]
+      });
+    }
+
+    // Verificando se o código está correto
+    if (codigo_verificacao === codigo_para_verificar) {
+      const isValid = await sys_users.findOne({
+        where: {
+          data_json: {
+            telefone: numero_telefone_temp
+          }
+        }
+      });
+
+      if (isValid)
+        return res.status(400).json({
+          errors: [
+            {
+              msg:
+                "Telefone já cadastrado, gere um novo PIN com um número de telefone válido"
+            }
+          ]
+        });
+
+      data_json.telefone = numero_telefone_temp;
+
+      await delete data_json.pin_validator;
+
+      // Ativando conta e alterando data_json (removendo o pin_validator)
+      await sys_users.update(
+        {
+          activated: 1,
+          data_json
+        },
+        { where: { uuid_sysusers: req.user.id } }
+      );
+
+      return res.json({ successMessage: "PIN validado com sucesso!" });
+    } else {
+      return res
+        .status(400)
+        .json({ errors: [{ msg: "Número de PIN incorreto" }] });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      errors: [{ msg: "Erro ao validar PIN ", callback: error.message }]
+    });
+  }
+};
+
+// @route    GET /api/services/categorias
+// @desc     Retornar as categorias e os dados depedentes
+exports.retornar_categorias = async (req, res) => {
+  try {
+    // Buscando categorias
+    const categorias = await cad_categorias.findAll();
+
+    // Mapeando todas as categorias
+    const response = await Promise.all(
+      categorias.map(async categoria => {
+        // Retornando dados da categoria
+        const { id_categoria, desccategoria, nomeicone } = categoria;
+
+        // definindo objeto final
+        const objetoFinal = {
+          id_categoria,
+          nomeCategoria: desccategoria,
+          iconeCategoria: nomeicone,
+          subcategorias: null,
+          totalLocais: null
+        };
+
+        // Buscando subcategorias
+        const subcategorias = await cad_subcategorias.findAll({
+          limit: 6,
+          attributes: ["descsubcategoria"],
+          where: {
+            id_categoria
+          }
+        });
+
+        // Definindo subcategorias no objetoFinal
+        objetoFinal.subcategorias = await Promise.all(
+          subcategorias.map(subcategoria => {
+            return subcategoria.descsubcategoria;
+          })
+        );
+
+        // Retornando total de estabelecimentos naquela categoria
+        const query =
+          "select SUM(total_por_id) as total_estabelecimentos from (select distinct id_estabelecimento as total_Por_Id from est_estabelecimento_servicos where id_categoria = " +
+          id_categoria +
+          ") as temporary";
+        const countEstabelecimentos = await sequelize.query(query);
+
+        // Definindo total de estabelecimentos no objetoFinal
+        objetoFinal.totalLocais =
+          countEstabelecimentos[0][0].total_estabelecimentos;
+
+        return objetoFinal;
+      })
     );
 
-    return res.json({ successMessage: "PIN validado com sucesso!" });
-  } else {
-    return res
-      .status(400)
-      .json({ errors: [{ msg: "Número de PIN incorreto" }] });
+    res.send(response);
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      errors: [{ msg: "Erro ao retornar categorias ", callback: error.message }]
+    });
   }
 };
