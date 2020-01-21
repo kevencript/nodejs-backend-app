@@ -1,5 +1,7 @@
 "use strict";
 
+const sequelizePaginate = require("sequelize-paginate");
+
 module.exports = (sequelize, DataTypes) => {
   const est_estabelecimento_servicos = sequelize.define(
     "est_estabelecimento_servicos",
@@ -40,6 +42,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     { force: false }
   );
+
+  // Paginador
+  sequelizePaginate.paginate(est_estabelecimento_servicos);
+
+  // Relacionamentos
   est_estabelecimento_servicos.associate = function(models) {
     // Categorias
     est_estabelecimento_servicos.hasMany(models.cad_categorias, {

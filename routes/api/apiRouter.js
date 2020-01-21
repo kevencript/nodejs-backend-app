@@ -11,9 +11,11 @@ const router = express.Router();
 // modules import
 const users = require("./users");
 const services = require("./services");
+const estabelecimentos = require("./estabelecimentos");
 
 // Routing
 router.use("/users", users);
 router.use("/services", services);
+router.use("/estabelecimentos", estabelecimentos);
 
 module.exports = router;

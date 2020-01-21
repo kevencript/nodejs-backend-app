@@ -1,10 +1,11 @@
 "use strict";
+const sequelizePaginate = require("sequelize-paginate");
 
 module.exports = (sequelize, DataTypes) => {
   const est_estabelecimentos = sequelize.define(
     "est_estabelecimentos",
     {
-      id_estabelecimento_favorito: {
+      id_estabelecimento: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
@@ -42,6 +43,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     { force: false }
   );
+
+  // Paginador
+  sequelizePaginate.paginate(est_estabelecimentos);
+
+  // Relacionamentos
   est_estabelecimentos.associate = function(models) {
     est_estabelecimentos.hasMany(models.est_estabelecimento_endereco, {
       foreignKey: "id_estabelecimento_endereco"
