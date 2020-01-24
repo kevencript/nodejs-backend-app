@@ -24,10 +24,16 @@ module.exports = (sequelize, DataTypes) => {
           key: "id_estabelecimento"
         }
       },
+      id_timezone: {
+        type: DataTypes.INTEGER,
+        references: {
+          model: "cad_timezones",
+          key: "id_timezone"
+        }
+      },
       descestabelecimento: DataTypes.STRING,
       cnpj: DataTypes.STRING,
       telefone: DataTypes.STRING,
-      cep: DataTypes.STRING,
       email: DataTypes.STRING,
       nomeicone: DataTypes.STRING,
       instagram: DataTypes.STRING,
@@ -36,10 +42,10 @@ module.exports = (sequelize, DataTypes) => {
       nota: DataTypes.STRING,
       ativo: DataTypes.TINYINT,
       ddd: DataTypes.CHAR(4),
-      id_imagem_capa: DataTypes.INTEGER,
-      id_imagem_fundo: DataTypes.INTEGER,
-      id_imagem_superior: DataTypes.INTEGER,
-      id_imagem_inferior: DataTypes.INTEGER
+      id_imagemcapa: DataTypes.INTEGER,
+      id_imagemfundo: DataTypes.INTEGER,
+      id_imagemsuperior: DataTypes.INTEGER,
+      id_imageminferior: DataTypes.INTEGER
     },
     { force: false }
   );
