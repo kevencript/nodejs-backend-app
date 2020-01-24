@@ -6,14 +6,20 @@
  *
  */
 
+const moment = require("moment-timezone");
+
 // models
 const {
   est_estabelecimento_servicos,
   est_estabelecimentos,
   est_estabelecimentos_favoritos,
   est_estabelecimento_endereco,
-  sys_users
+  cad_timezones,
+  sys_users,
+  sequelize
 } = require("../../../sequelize/models");
+
+const { Op } = require("sequelize");
 
 // @route    GET /api/estabelecimentos/categoria
 // @desc     Retornar listagem de estabelecimentos nos quais atendem determinada categoria
@@ -27,7 +33,21 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
     });
 
     // Retornando informações da URL
-    const { page_size, page, id_categoria } = req.params;
+    let {
+      page_size,
+      page,
+      id_categoria,
+      filtro_estabelecimento,
+      filtro_endereco
+    } = req.query;
+
+    // Configurações dos filtros de pesquisa
+    const config_filtro_endereco = filtro_endereco
+      ? "%" + filtro_endereco + "%"
+      : "%%";
+    const config_filtro_est = filtro_estabelecimento
+      ? "%" + filtro_estabelecimento + "%"
+      : "%%";
 
     // Configurações da query/paginação
     const paginationConfig = {
@@ -38,11 +58,21 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
       include: [
         {
           model: est_estabelecimentos,
-          attributes: ["id_estabelecimento", "desc_estabelecimento"],
+          attributes: ["id_estabelecimento", "descestabelecimento"],
+          where: {
+            descestabelecimento: { [Op.like]: config_filtro_est }
+          },
           include: [
             {
               model: est_estabelecimento_endereco,
+              where: {
+                bairro: { [Op.like]: config_filtro_endereco }
+              },
               attributes: ["cidade", "bairro"]
+            },
+            {
+              model: cad_timezones,
+              attributes: ["desctimezone"]
             }
           ]
         }
@@ -66,24 +96,75 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
           endereco_estabelecimento: null,
           favoritado: false,
           horario_funcionamento: null,
-          total_servicos: null,
-          aberto: false
+          aberto: false,
+          total_servicos: 0,
+          nota_estabelecimento: 0
         };
 
         // Desconstruindo
         const {
-          desc_estabelecimento,
+          descestabelecimento,
           est_estabelecimento_enderecos,
-          id_estabelecimento
+          id_estabelecimento,
+          cad_timezones
         } = estabelecimento.est_estabelecimentos[0];
 
-        // Verificando se o estabelecimento está favorito
+        // Desconstruindo Timezone e Definindo TimeZone
+        const time_zone = cad_timezones[0].desctimezone;
+        const timestampAtual = await moment.tz(new Date(), time_zone);
+
+        // Horario atual aplicando TimeZone
+        const CURRENT_TIME =
+          timestampAtual.hours() + ":" + timestampAtual.minutes();
+
+        // Dia da Semana atual aplicando TimeZone
+        const DIA_SEMANA = (await moment.tz(new Date(), time_zone).day()) + 1;
+
+        // Retornando se o estabelecimento está favorito
         const isFavoritado = await est_estabelecimentos_favoritos.findOne({
           where: {
             id_sysusers: user.id_sysusers,
             id_estabelecimento
           }
         });
+
+        // Retornando quantos serviços o estabelcimento presta
+        const total_servicos = await sequelize.query(
+          "select count(id_estabelecimento) as conta from est_estabelecimento_servicos where id_estabelecimento =2"
+        );
+
+        // Retornando nota do estabelecimento
+        const nota = await sequelize.query(
+          "SELECT AVG(valor_nota) FROM est_estabelecimentos_avaliacao where id_estabelecimento=" +
+            id_estabelecimento
+        );
+
+        // Retornando Horario funcionamento e se está aberto
+        const infoFuncionamentoEst = await sequelize.query(
+          `SELECT id_jornada_estabelecimento, id_estabelecimento, diasemana, horainicio, horafim,` +
+            `ativa, CURRENT_DATE, CASE WHEN   '${CURRENT_TIME}' BETWEEN ` +
+            `horainicio AND horafim THEN true ELSE false  END AS aberto ` +
+            `FROM est_estabelevimentos_jornadas EJ WHERE EJ.id_estabelecimento= ${id_estabelecimento} ` +
+            `AND EJ.diasemana IN (${DIA_SEMANA})`
+        );
+
+        // Montando nota do estabelecimento
+        const nota_estabelecimento = parseInt(nota[0][0].avg * 100) / 100;
+
+        // Montando horário de funcionamento
+        const horarioInicioParaMudar = infoFuncionamentoEst[0][0].horainicio.split(
+          ":"
+        );
+        const horarioFimParaMudar = infoFuncionamentoEst[0][0].horafim.split(
+          ":"
+        );
+        const horario_inicio =
+          horarioInicioParaMudar[0] + ":" + horarioInicioParaMudar[1];
+
+        const horario_fim =
+          horarioFimParaMudar[0] + ":" + horarioFimParaMudar[1];
+
+        const horario_funcionamento = horario_inicio + " às " + horario_fim;
 
         // Montando endereço
         const endereco_estabelecimento =
@@ -92,9 +173,15 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
           est_estabelecimento_enderecos[0].bairro;
 
         // Definindo valores no objeto
-        objetoParaMontar.nome_estabelecimento = desc_estabelecimento;
+        objetoParaMontar.nome_estabelecimento = descestabelecimento;
         objetoParaMontar.endereco_estabelecimento = endereco_estabelecimento;
         objetoParaMontar.favoritado = isFavoritado ? true : false;
+        objetoParaMontar.total_servicos = parseInt(total_servicos[0][0].conta);
+        objetoParaMontar.aberto = infoFuncionamentoEst[0][0].aberto;
+        objetoParaMontar.horario_funcionamento = horario_funcionamento;
+        objetoParaMontar.nota_estabelecimento = parseFloat(
+          nota_estabelecimento.toFixed(1)
+        );
 
         return objetoParaMontar;
       })

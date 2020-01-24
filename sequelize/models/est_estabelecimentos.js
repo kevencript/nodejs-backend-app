@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
           key: "id_estabelecimento"
         }
       },
-      desc_estabelecimento: DataTypes.STRING,
+      descestabelecimento: DataTypes.STRING,
       cnpj: DataTypes.STRING,
       telefone: DataTypes.STRING,
       cep: DataTypes.STRING,
@@ -49,12 +49,19 @@ module.exports = (sequelize, DataTypes) => {
 
   // Relacionamentos
   est_estabelecimentos.associate = function(models) {
+    // Endereço
     est_estabelecimentos.hasMany(models.est_estabelecimento_endereco, {
       foreignKey: "id_estabelecimento_endereco"
     });
 
+    // Auto-relação para definir matrizes
     est_estabelecimentos.hasMany(models.est_estabelecimentos, {
       foreignKey: "id_estabelecimento"
+    });
+
+    // Timezones
+    est_estabelecimentos.hasMany(models.cad_timezones, {
+      foreignKey: "id_timezone"
     });
   };
   return est_estabelecimentos;

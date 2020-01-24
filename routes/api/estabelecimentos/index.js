@@ -14,10 +14,6 @@ const { estabelecimentos_por_categoria } = require("./controller");
 // @route    GET /api/estabelecimentos/categoria
 // @desc     Retornar listagem de estabelecimentos nos quais atendem determinada categoria
 // @acess    Private
-router.get(
-  "/categoria/:page_size/:page/:id_categoria",
-  Auth,
-  estabelecimentos_por_categoria
-);
+router.get("/categoria", Auth, estabelecimentos_por_categoria);
 
 module.exports = router;
