@@ -23,7 +23,8 @@ module.exports = (sequelize, DataTypes) => {
       new_password_key: DataTypes.STRING,
       created: DataTypes.DATE,
       data_json: DataTypes.JSON,
-      foto: DataTypes.STRING
+      foto: DataTypes.STRING,
+      security_key: DataTypes.STRING
     },
     { force: false }
   );

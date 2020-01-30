@@ -64,7 +64,7 @@ exports.gerar_pin = async (req, res) => {
 
       // Verificando se o PIN está expirado
       const minutosDeDiferença = duration.asMinutes();
-      if (minutosDeDiferença < 3)
+      if (minutosDeDiferença < 0)
         return res.status(400).json({
           errors: [
             {
@@ -80,7 +80,7 @@ exports.gerar_pin = async (req, res) => {
       data_json.pin_validator.numero_telefone_temp = numero_telefone;
 
       // Realizando update no banco
-      await sys_users.update(
+      const teste = await sys_users.update(
         { data_json },
         {
           where: {
@@ -89,11 +89,13 @@ exports.gerar_pin = async (req, res) => {
         }
       );
 
+      console.log(teste);
+
       const messageSms =
         "Codigo de verificacao Backbeauty: " + codigoConfirmacao;
 
       // Enviando SMS
-      await enviarSms(numero_telefone_temp, messageSms);
+      await enviarSms(numero_telefone, messageSms);
 
       return res.json({ successMessage: "PIN gerado com sucesso" });
     }

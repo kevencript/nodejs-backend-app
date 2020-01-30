@@ -48,7 +48,14 @@ exports.registrar_usuario = async (req, res) => {
     return res.status(422).json({ errors: errors.array() });
   }
 
-  const { nome, email, password, user_cpf, data_nascimento } = req.body;
+  const {
+    nome,
+    email,
+    password,
+    user_cpf,
+    data_nascimento,
+    chave_seguranca
+  } = req.body;
 
   let userObject = {
     username: user_cpf,
@@ -74,6 +81,10 @@ exports.registrar_usuario = async (req, res) => {
 
     // Gerando hash
     userObject.password = await hasher.HashPassword(password, CRYPT_BLOWFISH);
+    userObject.security_key = await hasher.HashPassword(
+      chave_seguranca,
+      CRYPT_BLOWFISH
+    );
     let userCreated = await sys_users.create(userObject);
 
     const payload = {

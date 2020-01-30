@@ -152,17 +152,19 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
         const nota_estabelecimento = parseInt(nota[0][0].avg * 100) / 100;
 
         // Montando horário de funcionamento
-        const horarioInicioParaMudar = infoFuncionamentoEst[0][0].horainicio.split(
-          ":"
-        );
-        const horarioFimParaMudar = infoFuncionamentoEst[0][0].horafim.split(
-          ":"
-        );
-        const horario_inicio =
-          horarioInicioParaMudar[0] + ":" + horarioInicioParaMudar[1];
+        const horarioInicioParaMudar = infoFuncionamentoEst[0][0].horainicio
+          ? infoFuncionamentoEst[0][0].horainicio.split(":")
+          : null;
+        const horarioFimParaMudar = infoFuncionamentoEst[0][0].horafim
+          ? infoFuncionamentoEst[0][0].horafim.split(":")
+          : null;
+        const horario_inicio = horarioInicioParaMudar
+          ? horarioInicioParaMudar[0] + ":" + horarioInicioParaMudar[1]
+          : null;
 
-        const horario_fim =
-          horarioFimParaMudar[0] + ":" + horarioFimParaMudar[1];
+        const horario_fim = horarioFimParaMudar
+          ? horarioFimParaMudar[0] + ":" + horarioFimParaMudar[1]
+          : null;
 
         const horario_funcionamento = horario_inicio + " às " + horario_fim;
 
@@ -233,7 +235,8 @@ exports.estabelecimentos_por_id = async (req, res) => {
       instagram: null,
       twitter: null,
       email: null,
-      telefone: null
+      telefone: null,
+      imagens: null
     };
 
     // Retornando informações do estabelecimento
@@ -273,13 +276,12 @@ exports.estabelecimentos_por_id = async (req, res) => {
 
     // Retornando quantos serviços o estabelcimento presta
     const total_servicos = await sequelize.query(
-      "select count(id_estabelecimento) as conta from est_estabelecimento_servicos where id_estabelecimento =2"
+      `select count(id_estabelecimento) as conta from est_estabelecimento_servicos where id_estabelecimento = ${id_estabelecimento}`
     );
 
     // Retornando nota do estabelecimento
     const nota = await sequelize.query(
-      "SELECT AVG(valor_nota) FROM est_estabelecimentos_avaliacao where id_estabelecimento=" +
-        id_estabelecimento
+      `SELECT AVG(valor_nota) FROM est_estabelecimentos_avaliacao where id_estabelecimento=${id_estabelecimento}`
     );
 
     // Retornando Horario funcionamento e se está aberto
@@ -290,6 +292,19 @@ exports.estabelecimentos_por_id = async (req, res) => {
         `FROM est_estabelevimentos_jornadas EJ WHERE EJ.id_estabelecimento= ${id_estabelecimento} ` +
         `AND EJ.diasemana IN (${diaDaSemanaAtual})`
     );
+
+    // Retornando imagens
+    const imagensParaMudar = await sequelize.query(`SELECT
+        (select url from sys_imagens where id_imagem=id_imagemcapa) as imagem_capa,
+        (select url from sys_imagens where id_imagem=id_imagemfundo) as imagem_fundo,
+        (select url from sys_imagens where id_imagem=id_imagemsuperior) as imagem_superior,
+        (select url from sys_imagens where id_imagem=id_imageminferior) as imagem_inferior FROM
+         public.est_estabelecimentos where id_estabelecimento=${id_estabelecimento}`);
+
+    // Montando imagens
+    const imagens_estabelecimento = imagensParaMudar
+      ? imagensParaMudar[0][0]
+      : null;
 
     // Montando horário de funcionamento
     const horarioInicioParaMudar = infoFuncionamentoEst[0][0].horainicio.split(
@@ -320,11 +335,12 @@ exports.estabelecimentos_por_id = async (req, res) => {
     objetoParaMontar.twitter = estabelecimento.twitter;
     objetoParaMontar.email = estabelecimento.email;
     objetoParaMontar.telefone = estabelecimento.telefone;
+    objetoParaMontar.imagens = imagens_estabelecimento;
     objetoParaMontar.nota_estabelecimento = parseFloat(
       nota_estabelecimento.toFixed(1)
     );
 
-    res.json(objetoParaMontar);
+    res.send(objetoParaMontar);
   } catch (error) {
     console.log(error);
     res.status(400).json({
