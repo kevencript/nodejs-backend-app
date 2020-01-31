@@ -130,7 +130,7 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
 
         // Retornando quantos serviços o estabelcimento presta
         const total_servicos = await sequelize.query(
-          "select count(id_estabelecimento) as conta from est_estabelecimento_servicos where id_estabelecimento =2"
+          `select count(id_estabelecimento) as conta from est_estabelecimento_servicos where id_estabelecimento = ${id_estabelecimento}`
         );
 
         // Retornando nota do estabelecimento
@@ -232,6 +232,7 @@ exports.estabelecimentos_por_id = async (req, res) => {
       aberto: false,
       total_servicos: 0,
       nota_estabelecimento: 0,
+      total_avaliacoes: 0,
       instagram: null,
       twitter: null,
       email: null,
@@ -281,7 +282,8 @@ exports.estabelecimentos_por_id = async (req, res) => {
 
     // Retornando nota do estabelecimento
     const nota = await sequelize.query(
-      `SELECT AVG(valor_nota) FROM est_estabelecimentos_avaliacao where id_estabelecimento=${id_estabelecimento}`
+      `SELECT (select count (*) from est_estabelecimentos_avaliacao where id_estabelecimento=1) as total_avaliacoes,
+       AVG(valor_nota) as media_avaliacoes FROM est_estabelecimentos_avaliacao WHERE id_estabelecimento=${id_estabelecimento};`
     );
 
     // Retornando Horario funcionamento e se está aberto
@@ -307,13 +309,18 @@ exports.estabelecimentos_por_id = async (req, res) => {
       : null;
 
     // Montando horário de funcionamento
-    const horarioInicioParaMudar = infoFuncionamentoEst[0][0].horainicio.split(
-      ":"
-    );
-    const horarioFimParaMudar = infoFuncionamentoEst[0][0].horafim.split(":");
-    const horario_inicio =
-      horarioInicioParaMudar[0] + ":" + horarioInicioParaMudar[1];
-    const horario_fim = horarioFimParaMudar[0] + ":" + horarioFimParaMudar[1];
+    const horarioInicioParaMudar = infoFuncionamentoEst
+      ? infoFuncionamentoEst[0][0].horainicio.split(":")
+      : null;
+    const horarioFimParaMudar = infoFuncionamentoEst
+      ? infoFuncionamentoEst[0][0].horafim.split(":")
+      : null;
+    const horario_inicio = horarioInicioParaMudar
+      ? horarioInicioParaMudar[0] + ":" + horarioInicioParaMudar[1]
+      : null;
+    const horario_fim = horarioFimParaMudar
+      ? horarioFimParaMudar[0] + ":" + horarioFimParaMudar[1]
+      : null;
 
     const horario_funcionamento = horario_inicio + " às " + horario_fim;
 
@@ -321,7 +328,12 @@ exports.estabelecimentos_por_id = async (req, res) => {
     const endereco_estabelecimento = cidade + " - " + bairro;
 
     // Montando nota do estabelecimento
-    const nota_estabelecimento = parseInt(nota[0][0].avg * 100) / 100;
+    const nota_estabelecimento = nota
+      ? parseInt(nota[0][0].media_avaliacoes * 100) / 100
+      : 0;
+
+    // Montando total de avaliações do estabelecimento
+    const total_avaliacoes = nota ? parseInt(nota[0][0].total_avaliacoes) : 0;
 
     // Definindo valores no objeto
     objetoParaMontar.id_estabelecimento = parseInt(id_estabelecimento);
@@ -336,6 +348,7 @@ exports.estabelecimentos_por_id = async (req, res) => {
     objetoParaMontar.email = estabelecimento.email;
     objetoParaMontar.telefone = estabelecimento.telefone;
     objetoParaMontar.imagens = imagens_estabelecimento;
+    objetoParaMontar.total_avaliacoes = total_avaliacoes;
     objetoParaMontar.nota_estabelecimento = parseFloat(
       nota_estabelecimento.toFixed(1)
     );
