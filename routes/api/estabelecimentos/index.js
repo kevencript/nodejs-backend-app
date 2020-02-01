@@ -14,14 +14,14 @@ const {
   estabelecimentos_por_id
 } = require("./controller");
 
-// @route    GET /api/estabelecimentos/categoria
+// @route    GET /api/estabelecimentos/categoria?page_size=x&page=x&id_categoria=x
 // @desc     Retornar listagem de estabelecimentos nos quais atendem determinada categoria
 // @acess    Private
 router.get("/categoria", Auth, estabelecimentos_por_categoria);
 
-// @route    GET /api/estabelecimentos/categoria/:id
+// @route    GET /api/estabelecimentos/categoria?id_estabelecimento=X
 // @desc     Retornar dados de um estabelecimento por ID
 // @acess    Private
-router.get("/categoria/:id_estabelecimento", Auth, estabelecimentos_por_id);
+router.get("/", Auth, estabelecimentos_por_id);
 
 module.exports = router;

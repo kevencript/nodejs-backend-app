@@ -232,7 +232,7 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
 exports.estabelecimentos_por_id = async (req, res) => {
   try {
     // Retornando ID do esabelecimento passado via parametro
-    const { id_estabelecimento } = req.params;
+    const { id_estabelecimento } = req.query;
 
     // Retornando informações do usuário logado
     const user = await sys_users.findOne({
