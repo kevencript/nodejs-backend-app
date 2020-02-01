@@ -343,10 +343,10 @@ exports.estabelecimentos_por_id = async (req, res) => {
       : null;
 
     // Montando horário de funcionamento
-    const horarioInicioParaMudar = infoFuncionamentoEst.horainicio
+    const horarioInicioParaMudar = infoFuncionamentoEst[0][0].horainicio
       ? infoFuncionamentoEst[0][0].horainicio.split(":")
       : null;
-    const horarioFimParaMudar = infoFuncionamentoEst.horafim
+    const horarioFimParaMudar = infoFuncionamentoEst[0][0].horafim
       ? infoFuncionamentoEst[0][0].horafim.split(":")
       : null;
     const horario_inicio = horarioInicioParaMudar
