@@ -103,13 +103,25 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
         };
 
         // Desconstruindo informações e configurando TimeZone
-        const {
-          descestabelecimento,
-          est_estabelecimento_enderecos,
-          id_estabelecimento,
-          cad_timezones
-        } = estabelecimento.est_estabelecimentos[0];
-        const time_zone = cad_timezones[0].desctimezone; // cada estebelcimento tem sem próprio timezone
+        const { est_estabelecimentos } = estabelecimento;
+
+        const descestabelecimento = est_estabelecimentos[0]
+          ? est_estabelecimentos[0].descestabelecimento
+          : null;
+
+        const est_estabelecimento_enderecos = est_estabelecimentos[0]
+          ? est_estabelecimentos[0].est_estabelecimento_enderecos
+          : null;
+
+        const id_estabelecimento = est_estabelecimentos[0]
+          ? est_estabelecimentos[0].id_estabelecimento
+          : null;
+
+        const cad_timezones = est_estabelecimentos[0]
+          ? est_estabelecimentos[0].cad_timezones
+          : null;
+
+        const time_zone = cad_timezones ? cad_timezones[0].desctimezone : null; // cada estebelcimento tem sem próprio timezone
         const timestampAtual = await moment.tz(new Date(), time_zone);
 
         // Horario atual aplicando TimeZone
@@ -152,10 +164,10 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
         const nota_estabelecimento = parseInt(nota[0][0].avg * 100) / 100;
 
         // Montando horário de funcionamento
-        const horarioInicioParaMudar = infoFuncionamentoEst[0][0].horainicio
+        const horarioInicioParaMudar = infoFuncionamentoEst[0][0]
           ? infoFuncionamentoEst[0][0].horainicio.split(":")
           : null;
-        const horarioFimParaMudar = infoFuncionamentoEst[0][0].horafim
+        const horarioFimParaMudar = infoFuncionamentoEst[0][0]
           ? infoFuncionamentoEst[0][0].horafim.split(":")
           : null;
         const horario_inicio = horarioInicioParaMudar
@@ -169,10 +181,16 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
         const horario_funcionamento = horario_inicio + " às " + horario_fim;
 
         // Montando endereço
-        const endereco_estabelecimento =
-          est_estabelecimento_enderecos[0].cidade +
-          " - " +
-          est_estabelecimento_enderecos[0].bairro;
+        const endereco_estabelecimento = est_estabelecimento_enderecos
+          ? est_estabelecimento_enderecos[0].cidade +
+            " - " +
+            est_estabelecimento_enderecos[0].bairro
+          : null;
+
+        // Montando se os estabelecimento está aberto
+        const isAberto = infoFuncionamentoEst[0][0]
+          ? infoFuncionamentoEst[0][0].aberto
+          : null;
 
         // Definindo valores no objeto
         objetoParaMontar.id_estabelecimento = parseInt(id_estabelecimento);
@@ -180,7 +198,7 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
         objetoParaMontar.endereco_estabelecimento = endereco_estabelecimento;
         objetoParaMontar.favoritado = isFavoritado ? true : false;
         objetoParaMontar.total_servicos = parseInt(total_servicos[0][0].conta);
-        objetoParaMontar.aberto = infoFuncionamentoEst[0][0].aberto;
+        objetoParaMontar.aberto = isAberto;
         objetoParaMontar.horario_funcionamento = horario_funcionamento;
         objetoParaMontar.nota_estabelecimento = parseFloat(
           nota_estabelecimento.toFixed(1)
@@ -256,9 +274,25 @@ exports.estabelecimentos_por_id = async (req, res) => {
     });
 
     // Desconstruindo Informações do Estabelecimento
-    const { descestabelecimento } = estabelecimento;
-    const { cidade, bairro } = estabelecimento.est_estabelecimento_enderecos[0];
-    const { desctimezone } = estabelecimento.cad_timezones[0];
+    const descestabelecimento = estabelecimento
+      ? estabelecimento.descestabelecimento
+      : null;
+
+    const est_estabelecimento_enderecos = estabelecimento
+      ? estabelecimento.est_estabelecimento_enderecos
+      : null;
+
+    const cidade = est_estabelecimento_enderecos
+      ? est_estabelecimento_enderecos[0].cidade
+      : null;
+
+    const bairro = est_estabelecimento_enderecos
+      ? est_estabelecimento_enderecos[0].bairro
+      : null;
+
+    const desctimezone = estabelecimento
+      ? estabelecimento.cad_timezones[0].desctimezone
+      : null;
 
     // Configurações de TimeZone
     const time_zone = desctimezone; // cada estebelcimento tem sem próprio timezone
@@ -309,10 +343,10 @@ exports.estabelecimentos_por_id = async (req, res) => {
       : null;
 
     // Montando horário de funcionamento
-    const horarioInicioParaMudar = infoFuncionamentoEst
+    const horarioInicioParaMudar = infoFuncionamentoEst.horainicio
       ? infoFuncionamentoEst[0][0].horainicio.split(":")
       : null;
-    const horarioFimParaMudar = infoFuncionamentoEst
+    const horarioFimParaMudar = infoFuncionamentoEst.horafim
       ? infoFuncionamentoEst[0][0].horafim.split(":")
       : null;
     const horario_inicio = horarioInicioParaMudar
@@ -335,18 +369,29 @@ exports.estabelecimentos_por_id = async (req, res) => {
     // Montando total de avaliações do estabelecimento
     const total_avaliacoes = nota ? parseInt(nota[0][0].total_avaliacoes) : 0;
 
+    // Montando se o estabelecimento está aberto ou não
+    const isAberto = infoFuncionamentoEst[0][0]
+      ? infoFuncionamentoEst[0][0].aberto
+      : null;
+
+    // Montando Redes sociais
+    const instagram = estabelecimento ? estabelecimento.instagram : null;
+    const twitter = estabelecimento ? estabelecimento.twitter : null;
+    const email = estabelecimento ? estabelecimento.email : null;
+    const telefone = estabelecimento ? estabelecimento.telefone : null;
+
     // Definindo valores no objeto
     objetoParaMontar.id_estabelecimento = parseInt(id_estabelecimento);
     objetoParaMontar.nome_estabelecimento = descestabelecimento;
     objetoParaMontar.endereco_estabelecimento = endereco_estabelecimento;
     objetoParaMontar.favoritado = isFavoritado ? true : false;
     objetoParaMontar.horario_funcionamento = horario_funcionamento;
-    objetoParaMontar.aberto = infoFuncionamentoEst[0][0].aberto;
+    objetoParaMontar.aberto = isAberto;
     objetoParaMontar.total_servicos = parseInt(total_servicos[0][0].conta);
-    objetoParaMontar.instagram = estabelecimento.instagram;
-    objetoParaMontar.twitter = estabelecimento.twitter;
-    objetoParaMontar.email = estabelecimento.email;
-    objetoParaMontar.telefone = estabelecimento.telefone;
+    objetoParaMontar.instagram = instagram;
+    objetoParaMontar.twitter = twitter;
+    objetoParaMontar.email = email;
+    objetoParaMontar.telefone = telefone;
     objetoParaMontar.imagens = imagens_estabelecimento;
     objetoParaMontar.total_avaliacoes = total_avaliacoes;
     objetoParaMontar.nota_estabelecimento = parseFloat(
