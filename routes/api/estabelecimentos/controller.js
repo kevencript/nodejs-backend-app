@@ -227,6 +227,133 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
   }
 };
 
+// @route    GET /api/estabelecimentos/servicos?id_estabelecimento=X
+// @desc     Retornar as Categorias, Subcategorias até serviços de um estabelecimento
+exports.servicos_estabelecimento = async (req, res) => {
+  try {
+    const id_estabelecimento = req.query ? req.query.id_estabelecimento : null;
+
+    // Verificando ID do estabelecimento
+    if (!id_estabelecimento) throw new Error("ID do estabelecimento inválido");
+
+    const categoriasEServicos = await sequelize.query(`
+        SELECT
+
+        ESE.id_estabelecimento,
+        ESE.id_estabelecimento_servico,
+        ES.descestabelecimento,
+        ESE.id_categoria,
+        ESE.id_subcategoria,
+        ESE.id_subcategoria_servico,
+        CAD.desccategoria,
+        SUB.descsubcategoria,
+        SSE.descsubcategoria_servico,
+        SSE.valorservico
+      
+      FROM
+        public.est_estabelecimento_servicos ESE
+        INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
+        INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
+        INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
+      
+        LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
+      
+        where
+      
+        ESE.id_estabelecimento=${id_estabelecimento}`);
+
+    const objetoQuaseFinal = await Promise.all([
+      categoriasEServicos[0].map(categoriaEServico => {
+        // Verificando se há serviços dentro de uma subcategoria
+        if (categoriaEServico.descsubcategoria_servico) {
+          const {
+            id_categoria,
+            id_subcategoria,
+            id_subcategoria_servico,
+            desccategoria,
+            descsubcategoria,
+            descsubcategoria_servico,
+            valorservico
+          } = categoriaEServico;
+
+          return {
+            id_categoria: parseInt(id_categoria),
+            desccategoria,
+            subcategoria: {
+              id_subcategoria: parseInt(id_subcategoria),
+              descsubcategoria,
+              subcategoria_servico: {
+                id_subcategoria_servico: parseInt(id_subcategoria_servico),
+                descsubcategoria_servico,
+                valor_servico: valorservico
+              }
+            }
+          };
+        }
+
+        // Não tem subcategoria
+        const {
+          id_categoria,
+          id_subcategoria,
+          desccategoria,
+          descsubcategoria,
+          valorservico,
+          id_subcategoria_servico
+        } = categoriaEServico;
+
+        return {
+          id_categoria: parseInt(id_categoria),
+          desccategoria,
+          subcategoria: {
+            id_subcategoria: parseInt(id_subcategoria),
+            id_subcategoria_servico: parseInt(id_subcategoria_servico),
+            descsubcategoria,
+            valor_servico: valorservico
+          }
+        };
+      })
+    ]);
+
+    return res.send(objetoQuaseFinal[0]);
+
+    // Exemplo de padrão
+    const objetoFinal = [
+      {
+        id_categoria: 1,
+        desccategoria: "Cabelos",
+        subcategoria: {
+          id_subcategoria: 2,
+          descsubcategoria: "Corte Simples",
+          servico: {
+            id_subcategoria_servico: 5,
+            descsubcategoria_servico: "Tratamento",
+            valor_servico: "R$ 10,00"
+          }
+        }
+      },
+      {
+        id_categoria: 3,
+        desccategoria: "Cabelos",
+        subcategoria: {
+          id_subcategoria: 2,
+          descsubcategoria_servico: "Tratamento",
+          valor_servico: "R$ 25,00"
+        }
+      }
+    ];
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      errors: [
+        {
+          msg: "Erro ao retornar lista e serviços de um estabelecimento",
+          callback: error.message
+        }
+      ]
+    });
+  }
+};
+
 // @route    GET /api/estabelecimentos/categoria/:id
 // @desc     Retornar dados de um estabelecimento por ID
 exports.estabelecimentos_por_id = async (req, res) => {
