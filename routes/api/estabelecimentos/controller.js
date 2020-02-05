@@ -239,9 +239,7 @@ exports.servicos_estabelecimento = async (req, res) => {
     const categoriasEServicos = await sequelize.query(`
         SELECT
 
-        ESE.id_estabelecimento,
         ESE.id_estabelecimento_servico,
-        ES.descestabelecimento,
         ESE.id_categoria,
         ESE.id_subcategoria,
         ESE.id_subcategoria_servico,
@@ -315,32 +313,6 @@ exports.servicos_estabelecimento = async (req, res) => {
     ]);
 
     return res.send(objetoQuaseFinal[0]);
-
-    // Exemplo de padrão
-    const objetoFinal = [
-      {
-        id_categoria: 1,
-        desccategoria: "Cabelos",
-        subcategoria: {
-          id_subcategoria: 2,
-          descsubcategoria: "Corte Simples",
-          servico: {
-            id_subcategoria_servico: 5,
-            descsubcategoria_servico: "Tratamento",
-            valor_servico: "R$ 10,00"
-          }
-        }
-      },
-      {
-        id_categoria: 3,
-        desccategoria: "Cabelos",
-        subcategoria: {
-          id_subcategoria: 2,
-          descsubcategoria_servico: "Tratamento",
-          valor_servico: "R$ 25,00"
-        }
-      }
-    ];
   } catch (error) {
     console.log(error);
     res.status(400).json({
