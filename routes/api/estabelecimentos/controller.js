@@ -7,6 +7,7 @@
  */
 
 const moment = require("moment-timezone");
+const { groupBy } = require("../../../utilitarios/groupBy");
 
 // models
 const {
@@ -236,83 +237,107 @@ exports.servicos_estabelecimento = async (req, res) => {
     // Verificando ID do estabelecimento
     if (!id_estabelecimento) throw new Error("ID do estabelecimento inválido");
 
-    const categoriasEServicos = await sequelize.query(`
+    // Retornando categorias distintas para podermos realizar a separação
+    const categoriasParaIterar = await sequelize.query(`
         SELECT
+        distinct ESE.id_categoria, CAD.desccategoria
+            FROM
+              public.est_estabelecimento_servicos ESE
+              INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
+              INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
+              INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
+              LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
+          where ESE.id_estabelecimento=${id_estabelecimento}`);
 
-        ESE.id_estabelecimento_servico,
-        ESE.id_categoria,
-        ESE.id_subcategoria,
-        ESE.id_subcategoria_servico,
-        CAD.desccategoria,
-        SUB.descsubcategoria,
-        SSE.descsubcategoria_servico,
-        SSE.valorservico
-      
-      FROM
-        public.est_estabelecimento_servicos ESE
-        INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
-        INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
-        INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
-      
-        LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
-      
-        where
-      
-        ESE.id_estabelecimento=${id_estabelecimento}`);
+    // Inserindo subcategorias nas categorias selecionadas
+    const objetoFinal = [];
 
-    const objetoQuaseFinal = await Promise.all([
-      categoriasEServicos[0].map(categoriaEServico => {
-        // Verificando se há serviços dentro de uma subcategoria
-        if (categoriaEServico.descsubcategoria_servico) {
+    for (categoria of categoriasParaIterar[0]) {
+      const { id_categoria, desccategoria } = categoria;
+
+      const subcategoriasDistintas = await sequelize.query(`SELECT
+        distinct
+                SUB.id_subcategoria,
+                SUB.descsubcategoria
+              FROM
+                public.est_estabelecimento_servicos ESE
+                INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
+                INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
+                INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
+              
+                LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
+              
+           
+                where
+              
+                ESE.id_estabelecimento=${id_estabelecimento} and CAD.id_categoria = ${id_categoria}`);
+
+      // Definindo objeto com subcategorias para expandir-mos
+      const subcategoriasParaIterar = {
+        id_categoria: parseInt(id_categoria),
+        desc_categoria: desccategoria,
+        subcategorias: subcategoriasDistintas[0]
+      };
+
+      // Percorrendo subcategorias e buscando dados do serviço
+      const subcategoriasFinais = [];
+      for (item of subcategoriasParaIterar.subcategorias) {
+        const { id_subcategoria } = item;
+
+        const infosServicos = await sequelize.query(`
+          SELECT
+          ESE.id_subcategoria_servico,
+          SSE.descsubcategoria_servico,
+          SSE.valorservico
+        
+        FROM
+          public.est_estabelecimento_servicos ESE
+          INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
+          INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
+          INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
+        
+          LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
+    
+          where
+        
+          ESE.id_estabelecimento=${id_estabelecimento} and CAD.id_categoria = ${id_categoria} and SUB.id_subcategoria = ${id_subcategoria}
+		
+        `);
+
+        // Percorrendo serviços e setando valores
+        const arrayServicos = [];
+        for (servico of infosServicos[0]) {
           const {
-            id_categoria,
-            id_subcategoria,
             id_subcategoria_servico,
-            desccategoria,
-            descsubcategoria,
-            descsubcategoria_servico,
-            valorservico
-          } = categoriaEServico;
+            valorservico,
+            descsubcategoria_servico
+          } = servico;
 
-          return {
-            id_categoria: parseInt(id_categoria),
-            desccategoria,
-            subcategoria: {
-              id_subcategoria: parseInt(id_subcategoria),
-              descsubcategoria,
-              subcategoria_servico: {
-                id_subcategoria_servico: parseInt(id_subcategoria_servico),
-                descsubcategoria_servico,
-                valor_servico: valorservico
-              }
-            }
-          };
+          await arrayServicos.push({
+            id_subcategoria_servico: parseInt(id_subcategoria_servico),
+            desc_servico: descsubcategoria_servico,
+            valor_servico: valorservico
+          });
         }
 
-        // Não tem subcategoria
-        const {
-          id_categoria,
-          id_subcategoria,
-          desccategoria,
-          descsubcategoria,
-          valorservico,
-          id_subcategoria_servico
-        } = categoriaEServico;
-
-        return {
-          id_categoria: parseInt(id_categoria),
-          desccategoria,
-          subcategoria: {
-            id_subcategoria: parseInt(id_subcategoria),
-            id_subcategoria_servico: parseInt(id_subcategoria_servico),
-            descsubcategoria,
-            valor_servico: valorservico
-          }
+        // Acoplando serviços a nova subcategoria
+        const novaSubcategoria = {
+          ...item,
+          id_subcategoria: parseInt(item.id_subcategoria),
+          servicos: arrayServicos
         };
-      })
-    ]);
 
-    return res.send(objetoQuaseFinal[0]);
+        await subcategoriasFinais.push({ ...novaSubcategoria });
+      }
+
+      // Acomplando subcategorias e retornando o objeto final
+      await objetoFinal.push({
+        ...subcategoriasParaIterar,
+        subcategorias: subcategoriasFinais
+      });
+    }
+
+    return res.send(objetoFinal);
   } catch (error) {
     console.log(error);
     res.status(400).json({
