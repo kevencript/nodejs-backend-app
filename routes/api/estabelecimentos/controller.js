@@ -237,7 +237,7 @@ exports.servicos_estabelecimento = async (req, res) => {
     // Verificando ID do estabelecimento
     if (!id_estabelecimento) throw new Error("ID do estabelecimento inválido");
 
-    // Retornando categorias distintas para podermos realizar a separação
+    // Retornando lista de categorias relacionadas ao estabelecimento
     const categoriasParaIterar = await sequelize.query(`
         SELECT
         distinct ESE.id_categoria, CAD.desccategoria
@@ -249,63 +249,57 @@ exports.servicos_estabelecimento = async (req, res) => {
               LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
           where ESE.id_estabelecimento=${id_estabelecimento}`);
 
-    // Inserindo subcategorias nas categorias selecionadas
-    const objetoFinal = [];
+    const objetoFinal = []; // Conterá os objetos prontos para serem retornados via HTTP
 
+    // Iterando as categorias e expandindo as subcategorias
     for (categoria of categoriasParaIterar[0]) {
       const { id_categoria, desccategoria } = categoria;
 
+      // Retornando lista com as subcategorias distintas para serem expandidas futuramente
       const subcategoriasDistintas = await sequelize.query(`SELECT
-        distinct
-                SUB.id_subcategoria,
-                SUB.descsubcategoria
-              FROM
-                public.est_estabelecimento_servicos ESE
+            distinct
+              SUB.id_subcategoria,
+              SUB.descsubcategoria
+            FROM
+              public.est_estabelecimento_servicos ESE
                 INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
                 INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
                 INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
-              
                 LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
-              
-           
-                where
-              
+              where 
                 ESE.id_estabelecimento=${id_estabelecimento} and CAD.id_categoria = ${id_categoria}`);
 
-      // Definindo objeto com subcategorias para expandir-mos
+      // Definindo objeto com subcategorias para expandir-las
       const subcategoriasParaIterar = {
         id_categoria: parseInt(id_categoria),
         desc_categoria: desccategoria,
         subcategorias: subcategoriasDistintas[0]
       };
 
-      // Percorrendo subcategorias e buscando dados do serviço
-      const subcategoriasFinais = [];
+      const subcategoriasFinais = []; // Conterá a esturtura junto às subcategorias (expandire-mos os serviços futuramente)
+
+      // Percorrendo subcategorias e expandindo o serviço
       for (item of subcategoriasParaIterar.subcategorias) {
         const { id_subcategoria } = item;
 
         const infosServicos = await sequelize.query(`
           SELECT
-          ESE.id_subcategoria_servico,
-          SSE.descsubcategoria_servico,
-          SSE.valorservico
-        
-        FROM
-          public.est_estabelecimento_servicos ESE
-          INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
-          INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
-          INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
-        
-          LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
-    
-          where
-        
-          ESE.id_estabelecimento=${id_estabelecimento} and CAD.id_categoria = ${id_categoria} and SUB.id_subcategoria = ${id_subcategoria}
-		
-        `);
+            ESE.id_subcategoria_servico,
+            SSE.descsubcategoria_servico,
+            SSE.valorservico
+          FROM
+            public.est_estabelecimento_servicos ESE
+            INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
+            INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
+            INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
+            LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
+          WHERE
+            ESE.id_estabelecimento=${id_estabelecimento} and 
+            CAD.id_categoria = ${id_categoria} and SUB.id_subcategoria = ${id_subcategoria}`);
+
+        const arrayServicos = [];
 
         // Percorrendo serviços e setando valores
-        const arrayServicos = [];
         for (servico of infosServicos[0]) {
           const {
             id_subcategoria_servico,
@@ -320,7 +314,7 @@ exports.servicos_estabelecimento = async (req, res) => {
           });
         }
 
-        // Acoplando serviços a nova subcategoria
+        // Acoplando serviços à nova subcategoria
         const novaSubcategoria = {
           ...item,
           id_subcategoria: parseInt(item.id_subcategoria),

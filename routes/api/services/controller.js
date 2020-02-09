@@ -63,7 +63,7 @@ exports.gerar_pin = async (req, res) => {
 
       // Verificando se o PIN está expirado
       const minutosDeDiferença = duration.asMinutes();
-      if (minutosDeDiferença < 0)
+      if (minutosDeDiferença < 3)
         throw new Error(
           "Você deve esperar no mínimo 3 minutos para solicitar um novo PIN"
         );
