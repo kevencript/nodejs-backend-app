@@ -22,7 +22,9 @@ const {
   esqueceu_senha,
   validatorEsqueceuSenha,
   favoritar_estabelecimento,
-  validatorFavEstabelecimento
+  validatorFavEstabelecimento,
+  alterar_senha,
+  validatorAlterarSenha
 } = require("./controller");
 
 // utilitarios
@@ -62,6 +64,11 @@ router.get("/interesses", basicAuth, retornar_interesses);
 // @desc     Realizar procedimento caso o usuário equeça a senha
 // @acess    Public
 router.post("/esqueceu-senha", validatorEsqueceuSenha, esqueceu_senha);
+
+// @route    POST /api/users/alterar-senha
+// @desc     Realizar procedimento para alterar senha
+// @acess    Private
+router.post("/alterar-senha", Auth, validatorAlterarSenha, alterar_senha);
 
 // @route    POST /api/users/favoritar-estabelecimento
 // @desc     Rota utilizada para favoritar/desfavoritar um estabelecimento

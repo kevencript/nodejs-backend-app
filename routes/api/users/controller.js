@@ -14,6 +14,7 @@ const { cpf } = require("cpf-cnpj-validator");
 const { check, validationResult } = require("express-validator");
 const { jwtSecret } = require("../../../config/keys");
 const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
+const Hasher = new PasswordHash(8, true, 7);
 const { enviarEmail } = require("../../../utilitarios/enviarEmail");
 
 // models
@@ -72,16 +73,9 @@ exports.registrar_usuario = async (req, res) => {
   };
 
   try {
-    // Configs de criptografia
-    // Doc: https://github.com/glauberportella/password-hash
-    const len = 8;
-    const portable = true;
-    const phpversion = 7;
-    const hasher = new PasswordHash(len, portable, phpversion);
-
     // Gerando hash
-    userObject.password = await hasher.HashPassword(password, CRYPT_BLOWFISH);
-    userObject.security_key = await hasher.HashPassword(
+    userObject.password = await Hasher.HashPassword(password, CRYPT_BLOWFISH);
+    userObject.security_key = await Hasher.HashPassword(
       chave_seguranca,
       CRYPT_BLOWFISH
     );
@@ -491,6 +485,94 @@ exports.favoritar_estabelecimento = async (req, res) => {
           callback: err.message
         }
       ]
+    });
+  }
+};
+
+// @type     Middleware de validação dos campos
+// @route    POST /api/users/alterar-senha
+exports.validatorAlterarSenha = [
+  // Senha do usuário
+  check("senha_atual")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o campo da senha atual"),
+  check("nova_senha")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher os campos referentes à nova senha")
+    // Validador do padrão de senha
+    .custom(password => {
+      const isValid = passValidate.validate(password);
+      if (!isValid)
+        throw new Error(
+          "A senha deve conter pelo menos 8 caracteres, uma letra minúscula, uma maiúscula e um número"
+        );
+      return true;
+    }),
+  check("confirmacao_senha")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher os campos referentes à nova senha")
+    // Validador do padrão de senha
+    .custom(password => {
+      const isValid = passValidate.validate(password);
+      if (!isValid)
+        throw new Error(
+          "A senha deve conter pelo menos 8 caracteres, uma letra minúscula, uma maiúscula e um número"
+        );
+      return true;
+    })
+];
+
+// @route    POST /api/users/alterar-senha
+// @desc     Realizar procedimento para trocar senha
+exports.alterar_senha = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  // Extraindo informações da requisição
+  const { senha_atual, nova_senha, confirmacao_senha } = req.body;
+
+  try {
+    // Retornando dados do user logado
+    const user = await sys_users.findOne({
+      where: {
+        uuid_sysusers: req.user.id
+      }
+    });
+
+    // Verificando se a senha atual do usuário está correta
+    const storedHash = user.password;
+    const isMatch = await Hasher.CheckPassword(senha_atual, storedHash);
+    if (!isMatch) throw new Error("A senha atual não está correta");
+
+    // Verificando se os dois campos (nova senha e confirmação) são idênticos
+    if (!(nova_senha === confirmacao_senha))
+      throw new Error("O campo de confirmação deve ser idêntico ao da senha");
+
+    // Verificando se a nova senha é igual a senha atual (deve ser uma nova senha)
+    const isSenhaRepetida = await Hasher.CheckPassword(nova_senha, storedHash);
+    if (isSenhaRepetida)
+      throw new Error("Por favor, insira uma nova senha diferente da atual");
+
+    // Criptografando e inserindo nova senha no banco
+    const senha_criptografada = await Hasher.HashPassword(
+      nova_senha,
+      CRYPT_BLOWFISH
+    );
+    await sys_users.update(
+      { password: senha_criptografada },
+      { where: { uuid_sysusers: req.user.id } }
+    );
+
+    return res.json({ successMessage: "Senha alterada com sucesso!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      errors: [{ msg: "Erro ao trocar senha", callback: err.message }]
     });
   }
 };
