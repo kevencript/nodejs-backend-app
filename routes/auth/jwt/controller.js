@@ -34,9 +34,7 @@ exports.autenticar_usuario = async (req, res) => {
     });
 
     if (!user) {
-      return res
-        .status(400)
-        .json({ errors: [{ msg: "Email ou senha incorretos" }] });
+      throw new Error("Email ou senha incorretos");
     }
 
     // Realizando a comparação das senhas criptografadas
@@ -44,9 +42,7 @@ exports.autenticar_usuario = async (req, res) => {
     const isMatch = await Hasher.CheckPassword(password, storedHash);
 
     if (!isMatch) {
-      return res
-        .status(400)
-        .json({ errors: [{ msg: "Email ou senha incorretos" }] });
+      throw new Error("Email ou senha incorretos");
     }
 
     const payload = {
