@@ -16,13 +16,16 @@ const { jwtSecret } = require("../../../config/keys");
 const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
 const Hasher = new PasswordHash(8, true, 7);
 const { enviarEmail } = require("../../../utilitarios/enviarEmail");
+const axios = require("axios");
 
 // models
 const {
   sys_users,
   cad_interesses,
   cad_interesses_usuarios,
-  est_estabelecimentos_favoritos
+  est_estabelecimentos_favoritos,
+  cad_cartoes,
+  cad_bandeiras
 } = require("../../../sequelize/models");
 
 // Add properties to it
@@ -573,6 +576,153 @@ exports.alterar_senha = async (req, res) => {
     console.error(err);
     res.status(500).json({
       errors: [{ msg: "Erro ao trocar senha", callback: err.message }]
+    });
+  }
+};
+
+// @type     Middleware de validação dos campos
+// @route    POST /api/users/adicionar-cartao
+exports.validatorAdicionarCartao = [
+  check("nome_titular")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o nome do titular do cartão")
+    .isString()
+    .withMessage("O nome do titular não deve conter números")
+    .isLength({ min: 3, max: 255 })
+    .withMessage("O nome deve conter entre 3 e 150 caracteres"),
+  check("numero_cartao")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o número do cartão")
+    .isLength({ min: 16, max: 16 })
+    .withMessage("O número do cartão deve conter ao menos 16 caracteres"),
+  check("nome_impresso_cartao")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher o nome do titular do cartão")
+    .isString()
+    .withMessage("O nome do titular não deve conter números")
+    .isLength({ min: 3, max: 25 })
+    .withMessage(
+      "O nome impresso no cartão deve conter entre 3 e 25 caracteres"
+    ),
+  check("data_expiracao")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher a data de expiração do cartão")
+    .isString()
+    .withMessage("A data de expiração deve conter somente o mês e o ano")
+    .isLength({ min: 7, max: 7 })
+    .withMessage(
+      "A data expiração deve ter no máximo 7 caracteres contendo mês/ano"
+    ),
+  check("id_bandeira")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, selecionar a bandeira do cartão")
+    .not()
+    .isString()
+    .withMessage("A bandeira do cartão deve ser um número inteiro")
+];
+
+// @route    POST /api/users/adicionar-cartao
+// @desc     Vincular um cartão de crédito ao usuário
+exports.adicionar_cartao = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  try {
+    const {
+      nome_titular,
+      numero_cartao,
+      nome_impresso_cartao,
+      data_expiracao,
+      id_bandeira
+    } = req.body;
+
+    // Retornando bandeira por meio do ID
+    const bandeira = await cad_bandeiras.findOne({
+      where: {
+        id_bandeira: id_bandeira
+      }
+    });
+
+    if (!bandeira)
+      throw new Error("Não existe nenhuma bandeira com o ID informado");
+
+    // Retornando dados do user logado
+    const user = await sys_users.findOne({
+      where: {
+        uuid_sysusers: req.user.id
+      }
+    });
+
+    // Realizando requisição na API da Cielo para Tokenizar o cartão
+    const dataCartao = await axios.post(
+      "https://apisandbox.cieloecommerce.cielo.com.br/1/card",
+      {
+        CustomerName: nome_titular,
+        CardNumber: numero_cartao,
+        Holder: nome_impresso_cartao,
+        ExpirationDate: data_expiracao,
+        Brand: bandeira
+      },
+      {
+        headers: {
+          MerchantId: "7f1c7dc2-93b1-43c5-a965-fce3e3cf9435",
+          MerchantKey: "NMFNCOZFFIQRYKAEUKUGPNVUTQCFKEVJAMBGQYRJ"
+        }
+      }
+    );
+
+    // Retornando variáveis da query
+    const tokenCartao = dataCartao.data.CardToken;
+    const urlGetCardNumber = dataCartao.data.Links.Href;
+
+    // Essa requisição confirma que o cartão foi Tokenizado e retorna o numero do cartão com asteríscos
+    const confirmacaoTokenizacao = await axios.get(urlGetCardNumber, {
+      headers: {
+        MerchantId: "7f1c7dc2-93b1-43c5-a965-fce3e3cf9435",
+        MerchantKey: "NMFNCOZFFIQRYKAEUKUGPNVUTQCFKEVJAMBGQYRJ"
+      }
+    });
+
+    const numero_cartao_seguro = confirmacaoTokenizacao.data.CardNumber;
+
+    // Verificando se o cartão do usuário já existe no banco
+    const isCartaoExistente = await cad_cartoes.findOne({
+      where: {
+        numerocartao: numero_cartao_seguro,
+        id_bandeira,
+        id_cliente: user.id_sysusers
+      }
+    });
+
+    if (isCartaoExistente)
+      throw new Error("Você não pode adicionar dois cartões idênticos");
+
+    // Inserindo cartão e vinculando o usuário
+    await cad_cartoes.create({
+      id_cliente: user.id_sysusers,
+      token: tokenCartao,
+      id_bandeira,
+      numerocartao: numero_cartao_seguro
+    });
+
+    res.send({ successMessage: "Cartão adicionado com sucesso!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      errors: [
+        {
+          msg:
+            "Erro ao adicionar cartão, verifique os campos e tente novamente",
+          callback: err.message
+        }
+      ]
     });
   }
 };

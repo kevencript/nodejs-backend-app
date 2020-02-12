@@ -396,11 +396,11 @@ exports.estabelecimentos_por_id = async (req, res) => {
       ? estabelecimento.est_estabelecimento_enderecos
       : null;
 
-    const cidade = infosEnderecoEstabelecimento
+    const cidade = infosEnderecoEstabelecimento[0]
       ? infosEnderecoEstabelecimento[0].cidade
       : null;
 
-    const bairro = infosEnderecoEstabelecimento
+    const bairro = infosEnderecoEstabelecimento[0]
       ? infosEnderecoEstabelecimento[0].bairro
       : null;
 

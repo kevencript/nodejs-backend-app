@@ -24,7 +24,9 @@ const {
   favoritar_estabelecimento,
   validatorFavEstabelecimento,
   alterar_senha,
-  validatorAlterarSenha
+  validatorAlterarSenha,
+  adicionar_cartao,
+  validatorAdicionarCartao
 } = require("./controller");
 
 // utilitarios
@@ -78,6 +80,16 @@ router.post(
   Auth,
   validatorFavEstabelecimento,
   favoritar_estabelecimento
+);
+
+// @route    POST /api/users/adicionar-cartao
+// @desc     Vincular um cartão de crédito ao usuário
+// @acess    Private
+router.post(
+  "/adicionar-cartao",
+  Auth,
+  validatorAdicionarCartao,
+  adicionar_cartao
 );
 
 module.exports = router;
