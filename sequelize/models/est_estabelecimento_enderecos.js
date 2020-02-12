@@ -1,8 +1,8 @@
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
-  const est_estabelecimento_endereco = sequelize.define(
-    "est_estabelecimento_endereco",
+  const est_estabelecimento_enderecos = sequelize.define(
+    "est_estabelecimento_enderecos",
     {
       id_estabelecimento_endereco: {
         type: DataTypes.INTEGER,
@@ -26,14 +26,20 @@ module.exports = (sequelize, DataTypes) => {
     },
     { force: false }
   );
-  est_estabelecimento_endereco.associate = function(models) {
-    est_estabelecimento_endereco.hasMany(models.est_estabelecimento_endereco, {
-      foreignKey: "id_estabelecimento_endereco"
-    });
+  est_estabelecimento_enderecos.associate = function(models) {
+    est_estabelecimento_enderecos.hasMany(
+      models.est_estabelecimento_enderecos,
+      {
+        foreignKey: "id_estabelecimento_endereco"
+      }
+    );
 
-    est_estabelecimento_endereco.hasMany(models.est_estabelecimento_endereco, {
-      foreignKey: "id_estabelecimento"
-    });
+    est_estabelecimento_enderecos.hasMany(
+      models.est_estabelecimento_enderecos,
+      {
+        foreignKey: "id_estabelecimento"
+      }
+    );
   };
-  return est_estabelecimento_endereco;
+  return est_estabelecimento_enderecos;
 };

@@ -278,13 +278,21 @@ exports.retornar_categorias = async (req, res) => {
     const response = await Promise.all(
       categorias.map(async categoria => {
         // Retornando dados da categoria
-        const { id_categoria, desccategoria, nomeicone } = categoria;
+        const icone_categoria = categoria.nomeicone
+          ? categoria.nomeicone
+          : null;
+
+        const nome_categoria = categoria.desccategoria
+          ? categoria.desccategoria
+          : null;
+
+        const { id_categoria } = categoria;
 
         // definindo objeto final
         const objetoFinal = {
           id_categoria,
-          nome_categoria: desccategoria,
-          icone_categoria: nomeicone,
+          nome_categoria,
+          icone_categoria,
           subcategorias: null,
           total_locais: 0
         };

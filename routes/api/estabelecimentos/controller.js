@@ -14,7 +14,7 @@ const {
   est_estabelecimento_servicos,
   est_estabelecimentos,
   est_estabelecimentos_favoritos,
-  est_estabelecimento_endereco,
+  est_estabelecimento_enderecos,
   cad_timezones,
   sys_users,
   sequelize
@@ -65,7 +65,7 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
           },
           include: [
             {
-              model: est_estabelecimento_endereco,
+              model: est_estabelecimento_enderecos,
               where: {
                 bairro: { [Op.like]: config_filtro_endereco }
               },
@@ -148,7 +148,7 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
 
         // Retornando nota do estabelecimento
         const nota = await sequelize.query(
-          "SELECT AVG(valor_nota) FROM est_estabelecimentos_avaliacao where id_estabelecimento=" +
+          "SELECT AVG(valornota) FROM est_estabelecimentos_avaliacoes where id_estabelecimento=" +
             id_estabelecimento
         );
 
@@ -241,13 +241,10 @@ exports.servicos_estabelecimento = async (req, res) => {
     const categoriasParaIterar = await sequelize.query(`
         SELECT
         distinct ESE.id_categoria, CAD.desccategoria
-            FROM
-              public.est_estabelecimento_servicos ESE
-              INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
-              INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
-              INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
-              LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
-          where ESE.id_estabelecimento=${id_estabelecimento}`);
+          FROM
+            public.est_estabelecimento_servicos ESE
+            INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
+          WHERE ESE.id_estabelecimento=${id_estabelecimento}`);
 
     const objetoFinal = []; // Conterá os objetos prontos para serem retornados via HTTP
 
@@ -262,11 +259,9 @@ exports.servicos_estabelecimento = async (req, res) => {
               SUB.descsubcategoria
             FROM
               public.est_estabelecimento_servicos ESE
-                INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
-                INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
-                INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
-                LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
-              where 
+              INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
+              INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
+            WHERE 
                 ESE.id_estabelecimento=${id_estabelecimento} and CAD.id_categoria = ${id_categoria}`);
 
       // Definindo objeto com subcategorias para expandir-las
@@ -285,8 +280,8 @@ exports.servicos_estabelecimento = async (req, res) => {
         const infosServicos = await sequelize.query(`
           SELECT
             ESE.id_subcategoria_servico,
-            SSE.descsubcategoria_servico,
-            SSE.valorservico
+            SSE.descsubcategoriaservico,
+            ESE.valorservico
           FROM
             public.est_estabelecimento_servicos ESE
             INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
@@ -304,12 +299,12 @@ exports.servicos_estabelecimento = async (req, res) => {
           const {
             id_subcategoria_servico,
             valorservico,
-            descsubcategoria_servico
+            descsubcategoriaservico
           } = servico;
 
           await arrayServicos.push({
             id_subcategoria_servico: parseInt(id_subcategoria_servico),
-            desc_servico: descsubcategoria_servico,
+            desc_servico: descsubcategoriaservico,
             valor_servico: valorservico
           });
         }
@@ -345,7 +340,7 @@ exports.servicos_estabelecimento = async (req, res) => {
   }
 };
 
-// @route    GET /api/estabelecimentos/categoria/:id
+// @route    GET /api/estabelecimentos?id_estabelecimento=X
 // @desc     Retornar dados de um estabelecimento por ID
 exports.estabelecimentos_por_id = async (req, res) => {
   try {
@@ -381,7 +376,7 @@ exports.estabelecimentos_por_id = async (req, res) => {
       where: { id_estabelecimento },
       include: [
         {
-          model: est_estabelecimento_endereco,
+          model: est_estabelecimento_enderecos,
           attributes: ["cidade", "bairro"]
         },
         {
@@ -396,16 +391,17 @@ exports.estabelecimentos_por_id = async (req, res) => {
       ? estabelecimento.descestabelecimento
       : null;
 
-    const est_estabelecimento_enderecos = estabelecimento
+    // Variavel com informações do estabelecimento
+    const infosEnderecoEstabelecimento = estabelecimento
       ? estabelecimento.est_estabelecimento_enderecos
       : null;
 
-    const cidade = est_estabelecimento_enderecos[0]
-      ? est_estabelecimento_enderecos[0].cidade
+    const cidade = infosEnderecoEstabelecimento
+      ? infosEnderecoEstabelecimento[0].cidade
       : null;
 
-    const bairro = est_estabelecimento_enderecos[0]
-      ? est_estabelecimento_enderecos[0].bairro
+    const bairro = infosEnderecoEstabelecimento
+      ? infosEnderecoEstabelecimento[0].bairro
       : null;
 
     const desctimezone = estabelecimento
@@ -434,8 +430,8 @@ exports.estabelecimentos_por_id = async (req, res) => {
 
     // Retornando nota do estabelecimento
     const nota = await sequelize.query(
-      `SELECT (select count (*) from est_estabelecimentos_avaliacao where id_estabelecimento=1) as total_avaliacoes,
-       AVG(valor_nota) as media_avaliacoes FROM est_estabelecimentos_avaliacao WHERE id_estabelecimento=${id_estabelecimento};`
+      `SELECT (select count (*) from est_estabelecimentos_avaliacoes where id_estabelecimento=1) as total_avaliacoes,
+       AVG(valornota) as media_avaliacoes FROM est_estabelecimentos_avaliacoes WHERE id_estabelecimento=${id_estabelecimento};`
     );
 
     // Retornando Horario funcionamento e se está aberto

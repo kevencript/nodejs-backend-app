@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       id_endereco: {
         type: DataTypes.INTEGER,
         references: {
-          model: "est_estabelecimento_endereco",
+          model: "est_estabelecimento_enderecos",
           key: "id_estabelecimento_endereco"
         }
       },
@@ -35,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
       cnpj: DataTypes.STRING,
       telefone: DataTypes.STRING,
       email: DataTypes.STRING,
-      nomeicone: DataTypes.STRING,
+
       instagram: DataTypes.STRING,
       facebook: DataTypes.STRING,
       twitter: DataTypes.STRING,
@@ -56,7 +56,7 @@ module.exports = (sequelize, DataTypes) => {
   // Relacionamentos
   est_estabelecimentos.associate = function(models) {
     // Endereço
-    est_estabelecimentos.hasMany(models.est_estabelecimento_endereco, {
+    est_estabelecimentos.hasMany(models.est_estabelecimento_enderecos, {
       foreignKey: "id_estabelecimento_endereco"
     });
 
