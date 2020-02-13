@@ -25,5 +25,9 @@ module.exports = {
   mex10: {
     user: process.env.MEX10_USER,
     password: process.env.MEX10_PASSWORD
+  },
+  cielo: {
+    MerchantId: process.env.MERCHANT_ID,
+    MerchantKey: process.env.MERCHANT_KEY
   }
 };

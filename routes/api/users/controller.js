@@ -12,7 +12,7 @@ const moment = require("moment");
 const uuidv4 = require("uuid/v4");
 const { cpf } = require("cpf-cnpj-validator");
 const { check, validationResult } = require("express-validator");
-const { jwtSecret } = require("../../../config/keys");
+const { jwtSecret, cielo } = require("../../../config/keys");
 const { PasswordHash, CRYPT_BLOWFISH } = require("node-phpass");
 const Hasher = new PasswordHash(8, true, 7);
 const { enviarEmail } = require("../../../utilitarios/enviarEmail");
@@ -672,8 +672,8 @@ exports.adicionar_cartao = async (req, res) => {
       },
       {
         headers: {
-          MerchantId: "7f1c7dc2-93b1-43c5-a965-fce3e3cf9435",
-          MerchantKey: "NMFNCOZFFIQRYKAEUKUGPNVUTQCFKEVJAMBGQYRJ"
+          MerchantId: cielo.MerchantId,
+          MerchantKey: cielo.MerchantKey
         }
       }
     );
@@ -685,8 +685,8 @@ exports.adicionar_cartao = async (req, res) => {
     // Essa requisição confirma que o cartão foi Tokenizado e retorna o numero do cartão com asteríscos
     const confirmacaoTokenizacao = await axios.get(urlGetCardNumber, {
       headers: {
-        MerchantId: "7f1c7dc2-93b1-43c5-a965-fce3e3cf9435",
-        MerchantKey: "NMFNCOZFFIQRYKAEUKUGPNVUTQCFKEVJAMBGQYRJ"
+        MerchantId: cielo.MerchantId,
+        MerchantKey: cielo.MerchantKey
       }
     });
 
