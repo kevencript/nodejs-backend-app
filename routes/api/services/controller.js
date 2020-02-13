@@ -16,6 +16,7 @@ const {
   cad_categorias,
   cad_subcategorias,
   est_estabelecimento_servicos,
+  cad_bandeiras,
   sequelize
 } = require("../../../sequelize/models");
 
@@ -336,6 +337,21 @@ exports.retornar_categorias = async (req, res) => {
     console.log(error);
     res.status(400).json({
       errors: [{ msg: "Erro ao retornar categorias ", callback: error.message }]
+    });
+  }
+};
+
+// @route    GET /api/services/bandeiras
+// @desc     Retornar as Bandeiras (cartões)
+exports.retornar_bandeiras = async (req, res) => {
+  try {
+    const bandeiras = await cad_bandeiras.findAll();
+
+    res.send(bandeiras);
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      errors: [{ msg: "Erro ao retornar bandeiras ", callback: error.message }]
     });
   }
 };

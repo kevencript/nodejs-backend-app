@@ -15,7 +15,8 @@ const {
   validatorGerarPin,
   validatorValidarPin,
   validar_pin,
-  retornar_categorias
+  retornar_categorias,
+  retornar_bandeiras
 } = require("./controller");
 
 // @route    POST /api/services/gerar-pin
@@ -32,5 +33,10 @@ router.post("/validar-pin", basicAuth, validatorValidarPin, validar_pin);
 // @desc     Retornar as categorias e os dados depedentes
 // @acess    Private
 router.get("/categorias", Auth, retornar_categorias);
+
+// @route    GET /api/services/bandeiras
+// @desc     Retornar as Bandeiras (cartões)
+// @acess    Private
+router.get("/bandeiras", Auth, retornar_bandeiras);
 
 module.exports = router;

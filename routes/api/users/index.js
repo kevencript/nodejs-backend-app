@@ -26,7 +26,9 @@ const {
   alterar_senha,
   validatorAlterarSenha,
   adicionar_cartao,
-  validatorAdicionarCartao
+  validatorAdicionarCartao,
+  excluir_cartao,
+  retornar_cartoes
 } = require("./controller");
 
 // utilitarios
@@ -82,14 +84,19 @@ router.post(
   favoritar_estabelecimento
 );
 
-// @route    POST /api/users/adicionar-cartao
+// @route    POST /api/users/cartao
 // @desc     Vincular um cartão de crédito ao usuário
 // @acess    Private
-router.post(
-  "/adicionar-cartao",
-  Auth,
-  validatorAdicionarCartao,
-  adicionar_cartao
-);
+router.post("/cartao", Auth, validatorAdicionarCartao, adicionar_cartao);
+
+// @route    DELETE /api/users/cartao
+// @desc     Deletar um cartão de crédito do usuário
+// @acess    Private
+router.delete("/cartao", Auth, excluir_cartao);
+
+// @route    GET /api/users/cartoes
+// @desc     Retornar uma lista com os cartões do usuário
+// @acess    Private
+router.get("/cartoes", Auth, retornar_cartoes);
 
 module.exports = router;

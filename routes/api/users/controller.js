@@ -20,6 +20,7 @@ const axios = require("axios");
 
 // models
 const {
+  sequelize,
   sys_users,
   cad_interesses,
   cad_interesses_usuarios,
@@ -720,6 +721,79 @@ exports.adicionar_cartao = async (req, res) => {
         {
           msg:
             "Erro ao adicionar cartão, verifique os campos e tente novamente",
+          callback: err.message
+        }
+      ]
+    });
+  }
+};
+
+// @route    DELETE /api/users/cartao?id_cartao=X
+// @desc     Deletar um cartão de crédito do usuário
+exports.excluir_cartao = async (req, res) => {
+  try {
+    const { id_cartao } = req.query;
+
+    if (!id_cartao)
+      throw new Error("Por favor, preencher o ID do cartão a ser exlcuído");
+
+    // Retornando dados do user logado
+    const user = await sys_users.findOne({
+      where: {
+        uuid_sysusers: req.user.id
+      }
+    });
+
+    const wasDeleted = await cad_cartoes.destroy({
+      where: {
+        id_cartao,
+        id_cliente: user.id_sysusers
+      }
+    });
+
+    if (wasDeleted === 0)
+      throw new Error("Nenhum cartão encontrado com o ID identificado");
+
+    res.json({ successMessage: "Cartão excluído com sucesso" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      errors: [
+        {
+          msg: "Erro ao excluir cartão",
+          callback: err.message
+        }
+      ]
+    });
+  }
+};
+
+// @route    GET /api/users/cartoes
+// @desc     Retornar uma lista com os cartões do usuário
+exports.retornar_cartoes = async (req, res) => {
+  try {
+    // Retornando dados do user logado
+    const user = await sys_users.findOne({
+      where: {
+        uuid_sysusers: req.user.id
+      }
+    });
+
+    const cardList = await sequelize.query(`
+      SELECT CAR.id_cartao, 
+             CAR.numerocartao, 
+             BAN.descbandeira FROM 
+             public.cad_cartoes CAR
+             inner join public.cad_bandeiras BAN on (BAN.id_bandeira = CAR.id_bandeira)
+        where id_cliente = ${user.id_sysusers}`);
+
+    res.json(cardList[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      errors: [
+        {
+          msg: "Erro ao retornar cartões do usuário",
           callback: err.message
         }
       ]
