@@ -1,18 +1,18 @@
 const checkCondition = (data, condition, dataCheck) => {
   switch (condition) {
-    case '>':
+    case ">":
       if (data > dataCheck) {
         return true;
       } else {
         return false;
       }
-    case '<':
+    case "<":
       if (data < dataCheck) {
         return true;
       } else {
         return false;
       }
-    case '=':
+    case "=":
       if (data === dataCheck) {
         return true;
       } else {

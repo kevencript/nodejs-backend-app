@@ -12,10 +12,12 @@ const router = express.Router();
 const users = require("./users");
 const services = require("./services");
 const estabelecimentos = require("./estabelecimentos");
+const agendamentos = require("./agendamentos");
 
 // Routing
 router.use("/users", users);
 router.use("/services", services);
 router.use("/estabelecimentos", estabelecimentos);
+router.use("/agendamentos", agendamentos);
 
 module.exports = router;

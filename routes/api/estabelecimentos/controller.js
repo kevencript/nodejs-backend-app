@@ -7,7 +7,6 @@
  */
 
 const moment = require("moment-timezone");
-const { groupBy } = require("../../../utilitarios/groupBy");
 
 // models
 const {
