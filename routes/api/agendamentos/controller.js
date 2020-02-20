@@ -5,7 +5,9 @@
  * agendamentos
  *
  */
-
+const {
+  validarCupomPromocional
+} = require("../../../utilitarios/validarCupomPromocional");
 const {
   transacaoSimplesCredito,
   capturarVenda
@@ -57,6 +59,13 @@ exports.validatorCartaoCredito = [
     .withMessage(
       "O identificador do estabelecimento deve ser um valor inteiro"
     ),
+  check("id_servico")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, identificar o serviço")
+    .not()
+    .isString()
+    .withMessage("O identificador do serviço deve ser um valor inteiro"),
   check("parcelas")
     .not()
     .isEmpty()
@@ -75,18 +84,13 @@ exports.cartao_credito = async (req, res) => {
   }
 
   try {
-    // Validando se o campo "serviços" foi preenchido
-    if (!req.body.servicos || !req.body.servicos[0]) {
-      throw new Error("Por favor, preencher a lista de serviços");
-    }
-
     // Desconstruindo informações do Body
     const {
       id_estabelecimento,
       id_funcionario,
       id_cartao,
       cvv_cartao,
-      servicos,
+      id_servico,
       parcelas
     } = req.body;
 
@@ -106,26 +110,17 @@ exports.cartao_credito = async (req, res) => {
       }
     });
 
-    //  Percorrendo serviços enviados, validando e calculando valor total da venda
-    for (id_servico of servicos) {
-      if (typeof servico === "string")
-        throw new Error(
-          "Por favor, enviar somente valores inteiros para identificar os serviços"
-        );
-
-      const infosServico = await sequelize.query(`
+    //  Retornando valor do serviço enviado, validando e calculando valor total da venda
+    const infosServico = await sequelize.query(`
             SELECT valorservico::numeric::float8 FROM public.est_estabelecimento_servicos
             WHERE id_estabelecimento=${id_estabelecimento} and id_estabelecimento_servico=${id_servico}`);
 
-      if (!infosServico[0][0] || !infosServico[0][0].valorservico)
-        throw new Error(
-          "Erro ao retornar valor do serviço a partir dos ID (" +
-            id_servico +
-            ") informado"
-        );
+    if (!infosServico[0][0] || !infosServico[0][0].valorservico)
+      throw new Error(
+        "Erro ao retornar valor do serviço a partir do ID informado"
+      );
 
-      valorTotalVenda = valorTotalVenda + infosServico[0][0].valorservico;
-    }
+    valorTotalVenda = valorTotalVenda + infosServico[0][0].valorservico;
 
     // Buscando Token e Bandeira do cartão do usuário
     const infosCartao = await sequelize.query(`
@@ -141,6 +136,23 @@ exports.cartao_credito = async (req, res) => {
 
     CreditCard.CardToken = infosCartao[0][0].token;
     CreditCard.Brand = infosCartao[0][0].descbandeira;
+
+    // Validando CUPOM de DESCONTO e aplicando desconto
+    const codigoCupom = req.body.cupom_desconto
+      ? req.body.cupom_desconto
+      : null;
+
+    if (codigoCupom) {
+      const totalDesconto = await validarCupomPromocional(
+        codigoCupom,
+        user.id_sysusers,
+        valorTotalVenda
+      );
+
+      if (!totalDesconto) throw new Error("Cupom inválido");
+
+      valorTotalVenda = valorTotalVenda - totalDesconto;
+    }
 
     // Efetuando pagamento
     const { CardToken, Brand, SecurityToken, Parcelas } = CreditCard;
