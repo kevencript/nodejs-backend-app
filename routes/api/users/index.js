@@ -85,7 +85,7 @@ router.post(
 );
 
 // @route    POST /api/users/cartao
-// @desc     Vincular um cartão de crédito ao usuário
+// @desc     Adicionar um cartão de crédito ao usuário
 // @acess    Private
 router.post("/cartao", Auth, validatorAdicionarCartao, adicionar_cartao);
 

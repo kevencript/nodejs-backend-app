@@ -16,7 +16,8 @@ const { check, validationResult } = require("express-validator");
 const {
   sys_users,
   cad_cartoes,
-  sequelize
+  sequelize,
+  cad_bandeira
 } = require("../../../sequelize/models");
 
 // @type     Middleware de validação dos campos
@@ -150,12 +151,12 @@ exports.cartao_credito = async (req, res) => {
       Brand,
       valorTotalVenda,
       Parcelas,
-      "Arlindo"
+      user.nome
     );
 
     const PaymentId = infosTransacao.data.Payment.PaymentId;
 
-    // Efetuando Captura do pagamento (somente recebemos o dinheiro da vendo se a capturar-mos)
+    // Efetuando Captura do pagamento (somente recebemos o dinheiro da venda se ela for capturada)
     const infosConfirmacao = await capturarVenda(PaymentId);
 
     res.json(infosConfirmacao.data);
