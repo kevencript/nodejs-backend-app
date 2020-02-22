@@ -73,8 +73,6 @@ exports.transacaoSimplesCredito = async (
       }
     );
 
-    console.log(dataCartao);
-
     // Retornando erro das mensagens
     this.validatorCode(dataCartao.data.Payment.Status);
 
