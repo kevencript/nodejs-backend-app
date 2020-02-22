@@ -84,6 +84,17 @@ exports.cartao_credito = async (req, res) => {
   }
 
   try {
+    // Doc: https://metring.com.br/diferenca-entre-datas-em-javascript
+    const now = moment(new Date());
+    const past = moment(req.body.data_agendamento);
+    const duration = moment.duration(now.diff(past));
+
+    // Verificando se o PIN está expirado
+    const minutosDeDiferença = duration.asMinutes();
+
+    // Oi
+    return res.json(minutosDeDiferença);
+
     // Desconstruindo informações do Body
     const {
       id_estabelecimento,
