@@ -92,7 +92,7 @@ exports.cartao_credito = async (req, res) => {
     // Verificando se o PIN está expirado
     const minutosDeDiferença = duration.asMinutes();
 
-    // Oi
+    // Ois
     return res.json(minutosDeDiferença);
 
     // Desconstruindo informações do Body
