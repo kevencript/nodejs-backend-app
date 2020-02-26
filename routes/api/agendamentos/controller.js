@@ -44,23 +44,7 @@ exports.validatorCartaoCredito = [
     .withMessage(
       "O identificador do cartão de crédito deve ser um valor inteiro"
     ),
-  check("id_funcionario")
-    .not()
-    .isEmpty()
-    .withMessage("Por favor, identificar o funcionário responsável")
-    .not()
-    .isString()
-    .withMessage("O identificador do funcionário deve ser um valor inteiro"),
-  check("id_estabelecimento")
-    .not()
-    .isEmpty()
-    .withMessage("Por favor, identificar o estabelecimento")
-    .not()
-    .isString()
-    .withMessage(
-      "O identificador do estabelecimento deve ser um valor inteiro"
-    ),
-  check("id_servico")
+  check("id_agendamento_servico")
     .not()
     .isEmpty()
     .withMessage("Por favor, identificar o serviço")
@@ -73,17 +57,7 @@ exports.validatorCartaoCredito = [
     .withMessage("Por favor, identificar o número de parcelas")
     .not()
     .isString()
-    .withMessage("O número de parcelas deve ser um valor inteiro"),
-  check("data_agendamento")
-    .not()
-    .isEmpty()
-    .withMessage("Por favor, preencher a data di agendamento")
-  // .custom(dataAgendamento => {
-  //   const allPossibleFormats = [];
-
-  //   if (!isValid) throw new Error("CPF inválido");
-  //   return true;
-  // })
+    .withMessage("O número de parcelas deve ser um valor inteiro")
 ];
 
 // @route    POST /api/agendamentos/cartao-credito
@@ -95,35 +69,6 @@ exports.cartao_credito = async (req, res) => {
   }
 
   try {
-    // Doc: https://metring.com.br/diferenca-entre-datas-em-javascript
-    const now = moment(new Date());
-    const past = moment(req.body.data_agendamento);
-    const duration = moment.duration(now.diff(past));
-
-    // Verificando se o PIN está expirado
-    const minutosDeDiferença = duration.asMinutes();
-
-    return res.json(minutosDeDiferença);
-
-    // Desconstruindo informações do Body
-    const {
-      id_estabelecimento,
-      id_funcionario,
-      id_cartao,
-      cvv_cartao,
-      id_servico,
-      parcelas
-    } = req.body;
-
-    // Definição de variáveis globais
-    let valorTotalVenda = 0;
-    let CreditCard = {
-      CardToken: null,
-      Brand: null,
-      SecurityToken: cvv_cartao,
-      Parcelas: parcelas
-    };
-
     // Retornando dados do usuário logado
     const user = await sys_users.findOne({
       where: {
@@ -131,32 +76,51 @@ exports.cartao_credito = async (req, res) => {
       }
     });
 
-    //  Retornando valor do serviço enviado, validando e calculando valor total da venda
-    const infosServico = await sequelize.query(`
-            SELECT valorservico::numeric::float8 FROM public.est_estabelecimento_servicos
-            WHERE id_estabelecimento=${id_estabelecimento} and id_estabelecimento_servico=${id_servico}`);
+    // Desconstruindo informações do Body
+    const {
+      id_cartao,
+      cvv_cartao,
+      parcelas,
+      id_agendamento_servico
+    } = req.body;
 
-    if (!infosServico[0][0] || !infosServico[0][0].valorservico)
-      throw new Error(
-        "Erro ao retornar valor do serviço a partir do ID informado"
-      );
+    // Definição de variáveis globais
+    let valorTotalVenda = 0;
+    let valorTotalDesconto = 0;
+    let CreditCard = {
+      CardToken: null,
+      Brand: null,
+      SecurityToken: cvv_cartao,
+      Parcelas: parcelas
+    };
 
-    valorTotalVenda = valorTotalVenda + infosServico[0][0].valorservico;
+    // Retornando informações do agendamento e validando se o usuário tem acesso
+    const agendamento = await sequelize.query(
+      `
+      SELECT AGENDAMENTO.*, SERVICO.valorservico::numeric::float8 from
+        age_agendamentos_servicos AGENDAMENTO
+        
+        INNER JOIN est_estabelecimento_servicoS SERVICO
+        on AGENDAMENTO.id_estabelecimento_servico = SERVICO.id_estabelecimento_servico
+        
+      WHERE 
+        id_agendamento_servico = :id_agendamento_servico AND
+        id_cliente = :id_cliente
+    `,
+      {
+        replacements: {
+          id_cliente: user.id_sysusers,
+          id_agendamento_servico
+        },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
 
-    // Buscando Token e Bandeira do cartão do usuário
-    const infosCartao = await sequelize.query(`
-        SELECT 
-            CAR.token,
-            BAN.descbandeira
-        FROM cad_cartoes CAR INNER JOIN cad_bandeiras BAN ON BAN.id_bandeira = CAR.id_bandeira 
-        WHERE id_cliente = ${user.id_sysusers} and id_cartao = ${id_cartao}
-    `);
+    if (!agendamento[0])
+      throw new Error("Erro ao encontrar agendamento vinculado ao usuário");
 
-    if (!infosCartao[0][0])
-      throw new Error("Nenhum cartão encontrado no ID selecionado");
-
-    CreditCard.CardToken = infosCartao[0][0].token;
-    CreditCard.Brand = infosCartao[0][0].descbandeira;
+    // Definindo novo valor total da venda (a partir do serviço encontrado no agendamento)
+    valorTotalVenda = valorTotalVenda + agendamento[0].valorservico;
 
     // Validando CUPOM de DESCONTO e aplicando desconto
     const codigoCupom = req.body.cupom_desconto
@@ -173,7 +137,23 @@ exports.cartao_credito = async (req, res) => {
       if (!totalDesconto) throw new Error("Cupom inválido");
 
       valorTotalVenda = valorTotalVenda - totalDesconto;
+      valorTotalDesconto = valorTotalDesconto + totalDesconto;
     }
+
+    // Buscando Token e Bandeira do cartão do usuário
+    const infosCartao = await sequelize.query(`
+              SELECT 
+                  CAR.token,
+                  BAN.descbandeira
+              FROM cad_cartoes CAR INNER JOIN cad_bandeiras BAN ON BAN.id_bandeira = CAR.id_bandeira 
+              WHERE id_cliente = ${user.id_sysusers} and id_cartao = ${id_cartao}
+          `);
+
+    if (!infosCartao[0][0])
+      throw new Error("Nenhum cartão encontrado no ID selecionado");
+
+    CreditCard.CardToken = infosCartao[0][0].token;
+    CreditCard.Brand = infosCartao[0][0].descbandeira;
 
     // Efetuando pagamento
     const { CardToken, Brand, SecurityToken, Parcelas } = CreditCard;
@@ -225,7 +205,11 @@ exports.validatorPreAgendar = [
     .not()
     .isString()
     .withMessage("O identificador do serviço deve ser um valor inteiro"),
+<<<<<<< Updated upstream
   check("id_funcionarioagendamento")
+=======
+  check("id_funcionario")
+>>>>>>> Stashed changes
     .not()
     .isEmpty()
     .withMessage("Por favor, identificar o funcionário")
@@ -260,7 +244,11 @@ exports.pre_agendar = async (req, res) => {
     const {
       id_estabelecimento,
       id_estabelecimento_servico,
+<<<<<<< Updated upstream
       id_funcionarioagendamento,
+=======
+      id_funcionario,
+>>>>>>> Stashed changes
       id_horario
     } = req.body;
 
@@ -270,6 +258,10 @@ exports.pre_agendar = async (req, res) => {
     const status_funcionario = 1; // 1=agendado, 0=cancelado, 2=expirado
     const timestamp = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
     const id_cliente = parseInt(user.id_sysusers);
+<<<<<<< Updated upstream
+=======
+    const id_funcionarioagendamento = id_funcionario;
+>>>>>>> Stashed changes
 
     // Validando se o ID horário é válido
     const isHorarioValido = await sequelize.query(
@@ -408,7 +400,9 @@ exports.pre_agendar = async (req, res) => {
       insertPreAgendamento[0][0].id_agendamento_servico
     );
 
-    res.json({ id_agendamento_servico });
+    res.json({
+      id_agendamento_servico
+    });
   } catch (error) {
     console.log(error);
     res.status(400).json({
