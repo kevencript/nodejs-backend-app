@@ -272,6 +272,29 @@ exports.pre_agendar = async (req, res) => {
     const id_cliente = parseInt(user.id_sysusers);
     const id_funcionarioagendamento = id_funcionario_agendamento;
 
+    // Validando se o ID horário é válido
+    const isHorarioValido = await sequelize.query(
+      `
+        select true 
+        from est_horarios where 
+        id_estabelecimento = :id_estabelecimento and 
+        id_horario = :id_horario and 
+        ativo = true
+    `,
+      {
+        replacements: {
+          id_horario,
+          id_estabelecimento
+        },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    if (!isHorarioValido[0])
+      throw new Error(
+        "Identificador do horário ou estabelecimento inválido(s)"
+      );
+
     // Validando se o horário está ocupado
     const isOcupado = await sequelize.query(
       `
