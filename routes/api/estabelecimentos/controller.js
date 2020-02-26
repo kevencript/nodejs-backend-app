@@ -7,6 +7,7 @@
  */
 
 const moment = require("moment-timezone");
+const { check, validationResult } = require("express-validator");
 
 // models
 const {
@@ -148,16 +149,16 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
         // Retornando nota do estabelecimento
         const nota = await sequelize.query(
           "SELECT AVG(valornota) FROM est_estabelecimentos_avaliacoes where id_estabelecimento=" +
-            id_estabelecimento
+          id_estabelecimento
         );
 
         // Retornando Horario funcionamento e se está aberto
         const infoFuncionamentoEst = await sequelize.query(
           `SELECT id_jornada_estabelecimento, id_estabelecimento, diasemana, horainicio, horafim,` +
-            `ativa, CURRENT_DATE, CASE WHEN   '${horarioAtual}' BETWEEN ` +
-            `horainicio AND horafim THEN true ELSE false  END AS aberto ` +
-            `FROM est_estabelevimentos_jornadas EJ WHERE EJ.id_estabelecimento= ${id_estabelecimento} ` +
-            `AND EJ.diasemana IN (${diaDaSemanaAtual})`
+          `ativa, CURRENT_DATE, CASE WHEN   '${horarioAtual}' BETWEEN ` +
+          `horainicio AND horafim THEN true ELSE false  END AS aberto ` +
+          `FROM est_estabelevimentos_jornadas EJ WHERE EJ.id_estabelecimento= ${id_estabelecimento} ` +
+          `AND EJ.diasemana IN (${diaDaSemanaAtual})`
         );
 
         // Montando nota do estabelecimento
@@ -183,8 +184,8 @@ exports.estabelecimentos_por_categoria = async (req, res) => {
         // Montando endereço
         const endereco_estabelecimento = est_estabelecimento_enderecos
           ? est_estabelecimento_enderecos[0].cidade +
-            " - " +
-            est_estabelecimento_enderecos[0].bairro
+          " - " +
+          est_estabelecimento_enderecos[0].bairro
           : null;
 
         // Montando se os estabelecimento está aberto
@@ -436,10 +437,10 @@ exports.estabelecimentos_por_id = async (req, res) => {
     // Retornando Horario funcionamento e se está aberto
     const infoFuncionamentoEst = await sequelize.query(
       `SELECT id_jornada_estabelecimento, id_estabelecimento, diasemana, horainicio, horafim,` +
-        `ativa, CURRENT_DATE, CASE WHEN   '${horarioAtual}' BETWEEN ` +
-        `horainicio AND horafim THEN true ELSE false  END AS aberto ` +
-        `FROM est_estabelevimentos_jornadas EJ WHERE EJ.id_estabelecimento= ${id_estabelecimento} ` +
-        `AND EJ.diasemana IN (${diaDaSemanaAtual})`
+      `ativa, CURRENT_DATE, CASE WHEN   '${horarioAtual}' BETWEEN ` +
+      `horainicio AND horafim THEN true ELSE false  END AS aberto ` +
+      `FROM est_estabelevimentos_jornadas EJ WHERE EJ.id_estabelecimento= ${id_estabelecimento} ` +
+      `AND EJ.diasemana IN (${diaDaSemanaAtual})`
     );
 
     // Retornando imagens
@@ -518,6 +519,229 @@ exports.estabelecimentos_por_id = async (req, res) => {
       errors: [
         {
           msg: "Erro ao retornar estabelecimentos por categoria",
+          callback: error.message
+        }
+      ]
+    });
+  }
+};
+
+
+// MIDDLEWARE
+// @route   /api/estabelecimentos/funcionarios?id_estabelecimento=X
+exports.validatorFuncionariosEst = [
+  check("id_estabelecimento")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor preencha o id do estabelecimento")
+    .not()
+    .isString()
+    .withMessage("O id do estabelecimento deve ser um número inteiro")
+]
+
+// @route    GET /api/estabelecimentos/funcionarios?id_estabelecimento=X
+// @desc     Retornar os Funcionários de um estabelecimento
+exports.funcionarios_estabelecimento = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  try{
+
+    // Retornando ID do esabelecimento passado via parametro
+    const { id_estabelecimento } = req.body;
+
+    // Retornando lista de categorias relacionadas ao estabelecimento
+    const funcionariosEst = await sequelize.query(`
+        SELECT
+        servFunc.id_servicos_funcionarios,
+        servFunc.id_funcionario,
+        servFunc.percentualcomissao,
+        servFunc.ativo,
+        servFunc.id_estabelecimento_servicos,
+        estServ.id_estabelecimento
+      FROM
+        public.fun_servicos_funcionarios AS servFunc
+      INNER JOIN
+        public.est_estabelecimento_servicos AS estServ
+      ON
+        servFunc.id_estabelecimento_servicos = estServ.id_estabelecimento_servico
+      WHERE
+        estServ.id_estabelecimento = ${id_estabelecimento} AND
+        servFunc.ativo = true
+
+      
+      -- seleciona  funcionarios que fazem um servico especifico
+      -- where id_estabelecimento_servicos=1
+      -- ou 
+      -- seleciona servicos de um funcionario especifico
+      -- where id_funcionario=19`);
+
+    // const funcionariosEst = await sequelize.query(`
+    //     SELECT
+    //     id_funcionario,
+    //     nome
+    //     FROM public.fun_servicos_funcionarios WHERE id_estabelecimento = ${id_estabelecimento}`);
+
+    // const funcionariosEst = await sequelize.query(
+    //       `SELECT
+    //       H.horainicio, H.horafim
+          
+    //       FROM	est_horarios H
+    //       LEFT JOIN
+    //           age_funcionarios_servicos S
+                  
+    //       ON    H.id_horario = S.id_horario
+    //       and s.id_estabelecimento = h.id_estabelecimento
+    //       and s.id_funcionario=19 --parametro
+          
+          
+    //       WHERE 
+    //       h.id_estabelecimento = 1
+    //       and H.datatrabalho = '2020-02-20' --parametro
+    //       and S.id_horario IS NULL
+    //       order by horainicio`
+    // );
+
+    res.json(funcionariosEst[0]);
+
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      errors: [
+        {
+          msg: "Erro ao retornar lista de funcionários de um estabelecimento",
+          callback: error.message
+        }
+      ]
+    });
+  }
+};
+
+// MIDDLEWARE
+// @route   /api/estabelecimentos/funcionarios/horariosReservados?id_estabelecimento=X&id_funcionario=X&datatrabalho=XXXX-XX-XX
+exports.validatorFuncionariosHorariosRes = [
+  check("id_estabelecimento")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor preencha o id do estabelecimento")
+    .not()
+    .isString()
+    .withMessage("O id do estabelecimento deve ser um número inteiro"),
+  
+  check("id_funcionario")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor preencha o id do funcionário")
+    .not()
+    .isString()
+    .withMessage("O id do funcionário deve ser um número inteiro"),
+
+  check("data_trabalho")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor selecione uma data")
+    .custom(async data => {
+      const isValid = moment(data, 'YYYY-MM-DD', true).isValid() // true
+      console.log(isValid);
+      if(!isValid)
+        throw new Error("");
+      return true;
+    }).withMessage("Data inválida")
+]
+
+// @route    GET /api/estabelecimentos/funcionarios/horariosReservados?id_estabelecimento=X&id_funcionario=X&datatrabalho=XXXX-XX-XX
+// @desc     Retornar os horários reservados do funcionario selecionado
+exports.funcionarios_horarios_reservados = async (req,res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  try {
+    
+    // Retornando informações do Body
+    const { id_estabelecimento, id_funcionario, data_trabalho } = req.body;
+
+    // Retornando lista de categorias relacionadas ao estabelecimento
+    const funcionariosHoraRes = await sequelize.query(`
+    SELECT
+    S.id_estabelecimento,
+    S.id_funcionario,
+    H.horainicio,
+    H.horafim   
+
+    FROM
+      age_funcionarios_servicos S
+    INNER JOIN
+      est_horarios H
+    ON
+      H.id_estabelecimento = S.id_estabelecimento
+    AND 
+      H.id_horario = S.id_horario
+      
+    WHERE
+      h.id_estabelecimento = ${id_estabelecimento}
+      AND id_funcionario = ${id_funcionario}
+      AND	H.datatrabalho = '${data_trabalho}'`);
+
+    res.send(funcionariosHoraRes[0]);
+
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      errors: [
+        {
+          msg: "Erro ao retornar lista de horarios reservador do funcionário",
+          callback: error.message
+        }
+      ]
+    });
+  }
+};
+
+// @route    GET /api/estabelecimentos/funcionarios/horariosDisponiveis?id_estabelecimento=X&id_funcionario=X&datatrabalho=XXXX-XX-XX
+// @desc     Retornar os horários disponiveis do funcionario selecionado
+exports.funcionarios_horarios_disponiveis = async (req,res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  try {
+    
+    // Retornando informações do Body
+    const { id_estabelecimento, id_funcionario, data_trabalho } = req.body;
+
+    // Retornando lista de categorias relacionadas ao estabelecimento
+    const funcionariosHoraRes = await sequelize.query(`
+    SELECT
+    H.horainicio, H.horafim
+    
+    FROM	est_horarios H
+    LEFT JOIN
+      age_funcionarios_servicos S
+          
+    ON    H.id_horario = S.id_horario
+    and s.id_estabelecimento = h.id_estabelecimento
+    and s.id_funcionario=${id_funcionario}
+
+
+    WHERE 
+    h.id_estabelecimento = ${id_estabelecimento}
+    and H.datatrabalho = '${data_trabalho}'
+    and S.id_horario IS NULL
+    order by horainicio`);
+
+    res.send(funcionariosHoraRes[0]);
+
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      errors: [
+        {
+          msg: "Erro ao retornar lista de horarios disponiveis do funcionário",
           callback: error.message
         }
       ]
