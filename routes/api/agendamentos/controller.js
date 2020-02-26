@@ -14,6 +14,7 @@ const {
 } = require("../../../utilitarios/cielo");
 const { check, validationResult } = require("express-validator");
 const moment = require("moment");
+
 // models
 const {
   sys_users,
@@ -72,7 +73,17 @@ exports.validatorCartaoCredito = [
     .withMessage("Por favor, identificar o número de parcelas")
     .not()
     .isString()
-    .withMessage("O número de parcelas deve ser um valor inteiro")
+    .withMessage("O número de parcelas deve ser um valor inteiro"),
+  check("data_agendamento")
+    .not()
+    .isEmpty()
+    .withMessage("Por favor, preencher a data di agendamento")
+  // .custom(dataAgendamento => {
+  //   const allPossibleFormats = [];
+
+  //   if (!isValid) throw new Error("CPF inválido");
+  //   return true;
+  // })
 ];
 
 // @route    POST /api/agendamentos/cartao-credito
@@ -259,6 +270,29 @@ exports.pre_agendar = async (req, res) => {
     const status_funcionario = 1; // 1=agendado, 0=cancelado, 2=expirado
     const timestamp = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
     const id_cliente = parseInt(user.id_sysusers);
+
+    // Validando se o ID horário é válido
+    const isHorarioValido = await sequelize.query(
+      `
+        select true 
+        from est_horarios where 
+        id_estabelecimento = :id_estabelecimento and 
+        id_horario = :id_horario and 
+        ativo = true
+    `,
+      {
+        replacements: {
+          id_horario,
+          id_estabelecimento
+        },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    if (!isHorarioValido[0])
+      throw new Error(
+        "Identificador do horário ou estabelecimento inválido(s)"
+      );
 
     // Validando se o horário está ocupado
     const isOcupado = await sequelize.query(
