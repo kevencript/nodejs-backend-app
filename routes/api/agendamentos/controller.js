@@ -87,6 +87,8 @@ exports.cartao_credito = async (req, res) => {
     // Definição de variáveis globais
     let valorTotalVenda = 0;
     let valorTotalDesconto = 0;
+    let idCupom = null;
+    const timestamp = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
     let CreditCard = {
       CardToken: null,
       Brand: null,
@@ -116,10 +118,13 @@ exports.cartao_credito = async (req, res) => {
       }
     );
 
+    // Validando se o agendamento é vávlido e qual status
     if (!agendamento[0])
       throw new Error("Erro ao encontrar agendamento vinculado ao usuário");
 
-    // Definindo novo valor total da venda (a partir do serviço encontrado no agendamento)
+    if (agendamento[0].id_statusagendamento === 2)
+      throw new Error("O status de agendamento inválido");
+
     valorTotalVenda = valorTotalVenda + agendamento[0].valorservico;
 
     // Validando CUPOM de DESCONTO e aplicando desconto
@@ -128,32 +133,42 @@ exports.cartao_credito = async (req, res) => {
       : null;
 
     if (codigoCupom) {
-      const totalDesconto = await validarCupomPromocional(
+      const cupom = await validarCupomPromocional(
         codigoCupom,
         user.id_sysusers,
         valorTotalVenda
       );
 
-      if (!totalDesconto) throw new Error("Cupom inválido");
+      if (!cupom) throw new Error("Cupom inválido");
 
-      valorTotalVenda = valorTotalVenda - totalDesconto;
-      valorTotalDesconto = valorTotalDesconto + totalDesconto;
+      valorTotalVenda = valorTotalVenda - cupom.totalDesconto;
+      valorTotalDesconto = valorTotalDesconto + cupom.totalDesconto;
+      idCupom = cupom.id_cupom;
     }
 
     // Buscando Token e Bandeira do cartão do usuário
-    const infosCartao = await sequelize.query(`
-              SELECT 
-                  CAR.token,
-                  BAN.descbandeira
-              FROM cad_cartoes CAR INNER JOIN cad_bandeiras BAN ON BAN.id_bandeira = CAR.id_bandeira 
-              WHERE id_cliente = ${user.id_sysusers} and id_cartao = ${id_cartao}
-          `);
+    const infosCartao = await sequelize.query(
+      `
+            SELECT 
+                CAR.token,
+                BAN.descbandeira
+            FROM cad_cartoes CAR INNER JOIN cad_bandeiras BAN ON BAN.id_bandeira = CAR.id_bandeira 
+            WHERE id_cliente = :id_cliente and id_cartao = :id_cartao
+          `,
+      {
+        replacements: {
+          id_cliente: user.id_sysusers,
+          id_cartao
+        },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
 
-    if (!infosCartao[0][0])
+    if (!infosCartao[0])
       throw new Error("Nenhum cartão encontrado no ID selecionado");
 
-    CreditCard.CardToken = infosCartao[0][0].token;
-    CreditCard.Brand = infosCartao[0][0].descbandeira;
+    CreditCard.CardToken = infosCartao[0].token;
+    CreditCard.Brand = infosCartao[0].descbandeira;
 
     // Efetuando pagamento
     const { CardToken, Brand, SecurityToken, Parcelas } = CreditCard;
@@ -170,9 +185,158 @@ exports.cartao_credito = async (req, res) => {
     const PaymentId = infosTransacao.data.Payment.PaymentId;
 
     // Efetuando Captura do pagamento (somente recebemos o dinheiro da venda se ela for capturada)
-    const infosConfirmacao = await capturarVenda(PaymentId);
+    await capturarVenda(PaymentId);
 
-    res.json(infosConfirmacao.data);
+    // Inserindo informações da transação (fin_transacoes)
+    const insertTransacao = await sequelize.query(
+      `
+      INSERT INTO fin_transacoes (id_agendamentoservico, retornotransacao, dthoraretorno, nsurecibooperadora)
+      values(:id_agendamento_servico, :retornotransacao, :dthoraretorno, :PaymentId )
+    `,
+      {
+        replacements: {
+          id_agendamento_servico,
+          retornotransacao: JSON.stringify(infosTransacao.data),
+          dthoraretorno: timestamp,
+          PaymentId
+        },
+        type: sequelize.QueryTypes.INSERT
+      }
+    );
+    if (!insertTransacao[1] == 1)
+      throw new Error("Erro ao inserir informações da transação");
+
+    // Realizando update no agendamento para "pagamento realizado"
+    const updateAgendamento = await sequelize.query(
+      `
+        UPDATE age_agendamentos_servicos
+          SET id_statusagendamento = :id_statusagendamento
+        WHERE 
+          id_cliente = :id_cliente   AND
+          id_agendamento_servico = :id_agendamento_servico;
+    `,
+      {
+        replacements: {
+          id_statusagendamento: 2,
+          id_cliente: user.id_sysusers,
+          id_agendamento_servico
+        },
+        type: sequelize.QueryTypes.UPDATE
+      }
+    );
+    if (!updateAgendamento[1] == 1)
+      throw new Error("Erro ao atualizar status do agendamento");
+
+    // Gerando número do recibo para inserir a venda
+    const responseRecibo = await sequelize.query(
+      `
+      SELECT CONCAT( TO_CHAR(TIMESTAMP :timestamp,'YYYYMMDDHH24MISS'),
+      lpad(CAST( :id_estabelecimento AS VARCHAR),5,'0'), 
+      lpad(CAST( :id_cliente AS VARCHAR),8,'0'), 
+      lpad(CAST( :id_agendamento_servico AS VARCHAR),10,'0') ) AS numrecibo `,
+      {
+        replacements: {
+          id_estabelecimento: parseInt(agendamento[0].id_estabelecimento),
+          id_cliente: parseInt(user.id_sysusers),
+          id_agendamento_servico,
+          timestamp
+        },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    const numeroRecibo = responseRecibo[0].numrecibo;
+
+    // Inserindo venda (fin_vendas)
+    const responseFinVendas = await sequelize.query(
+      `
+          INSERT INTO
+          public.fin_vendas as VEND
+          (
+                  id_estabelecimento   ,
+                  id_agendamentoservico,
+                  id_funcionario       ,
+                  dthoravenda          ,
+                  statusvenda          ,
+                  totalvenda           ,
+                  numrecibo            ,
+                  valor                ,
+                  valordesconto        ,
+                  id_cliente           ,
+                  tipovenda
+          ) VALUES 
+            (:id_estabelecimento, :id_agendamento_servico, :id_funcionario, :timestamp,
+             :status, :valorTotalVenda, :numeroRecibo, :valor, :valorTotalDesconto, :id_cliente,
+             :tipo_venda) returning id_venda
+    `,
+      {
+        replacements: {
+          id_estabelecimento: parseInt(agendamento[0].id_estabelecimento),
+          id_agendamento_servico,
+          id_funcionario: parseInt(agendamento[0].id_funcionarioagendamento),
+          timestamp,
+          status: 1, // 1=pagamento realizado
+          valorTotalVenda,
+          numeroRecibo,
+          valor: agendamento[0].valorservico,
+          valorTotalDesconto,
+          id_cliente: parseInt(user.id_sysusers),
+          tipo_venda: 1 // 1=serviço 2=comanda avulsa
+        },
+        type: sequelize.QueryTypes.INSERT
+      }
+    );
+
+    if (!responseFinVendas[1] == 1) throw new Error("Erro ao inserir venda");
+
+    const { id_venda } = responseFinVendas[0][0];
+
+    // Inserindo pagamento
+    const responseInsertFinPagamento = await sequelize.query(
+      `
+          INSERT INTO
+          public.fin_vendas_pagamentos
+        (
+          id_venda,
+          formadepagamento,
+          numparcelas,
+          status,
+          dthorapagamento,
+          id_funcionario,
+          id_cupomdesconto,
+          id_cartao
+        )
+          VALUES
+        (
+          :id_venda,
+          :formadepagamento,
+          :Parcelas,
+          :status_pagamento,
+          :timestamp,
+          :id_funcionario,
+          :idCupom,
+          :id_cartao
+      )
+    `,
+      {
+        replacements: {
+          id_venda: parseInt(id_venda),
+          Parcelas,
+          timestamp,
+          id_funcionario: parseInt(agendamento[0].id_funcionarioagendamento),
+          idCupom,
+          status_pagamento: 1, // 1=pagamento realizado
+          id_cartao,
+          formadepagamento: "CR"
+        },
+        type: sequelize.QueryTypes.INSERT
+      }
+    );
+
+    if (!responseInsertFinPagamento[1] == 1)
+      throw new Error("Erro ao inserir informações de pagamento da venda");
+
+    res.json({ successMessage: "Agendamento realizado com sucesso" });
   } catch (error) {
     console.log(error);
     res.status(400).json({
