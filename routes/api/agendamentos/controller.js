@@ -251,7 +251,7 @@ exports.cartao_credito = async (req, res) => {
     const responseFinVendas = await sequelize.query(
       `
           INSERT INTO
-          public.fin_vendas as VEND
+          public.fin_vendas
           (
                   id_estabelecimento   ,
                   id_agendamentoservico,
