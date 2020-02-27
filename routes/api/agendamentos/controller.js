@@ -205,11 +205,7 @@ exports.validatorPreAgendar = [
     .not()
     .isString()
     .withMessage("O identificador do serviço deve ser um valor inteiro"),
-<<<<<<< Updated upstream
-  check("id_funcionarioagendamento")
-=======
   check("id_funcionario")
->>>>>>> Stashed changes
     .not()
     .isEmpty()
     .withMessage("Por favor, identificar o funcionário")
@@ -244,11 +240,7 @@ exports.pre_agendar = async (req, res) => {
     const {
       id_estabelecimento,
       id_estabelecimento_servico,
-<<<<<<< Updated upstream
-      id_funcionarioagendamento,
-=======
       id_funcionario,
->>>>>>> Stashed changes
       id_horario
     } = req.body;
 
@@ -258,10 +250,7 @@ exports.pre_agendar = async (req, res) => {
     const status_funcionario = 1; // 1=agendado, 0=cancelado, 2=expirado
     const timestamp = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
     const id_cliente = parseInt(user.id_sysusers);
-<<<<<<< Updated upstream
-=======
     const id_funcionarioagendamento = id_funcionario;
->>>>>>> Stashed changes
 
     // Validando se o ID horário é válido
     const isHorarioValido = await sequelize.query(
