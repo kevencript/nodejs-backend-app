@@ -67,8 +67,8 @@ exports.transacaoSimplesCredito = async (
       },
       {
         headers: {
-          MerchantId: MerchantId_PROD,
-          MerchantKey: MerchantKey_PROD
+          MerchantId: MerchantId,
+          MerchantKey: MerchantKey
         }
       }
     );
@@ -105,8 +105,8 @@ exports.capturarVenda = async paymentId => {
       {},
       {
         headers: {
-          MerchantId: MerchantId_PROD,
-          MerchantKey: MerchantKey_PROD
+          MerchantId: MerchantId,
+          MerchantKey: MerchantKey
         }
       }
     );
