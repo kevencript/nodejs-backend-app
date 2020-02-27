@@ -48,7 +48,10 @@ exports.validarCupomPromocional = async (
     // Validando se o cupom é válido
     if (!isValid[0][0]) return false;
 
-    return isValid[0][0].valordesconto;
+    return {
+      id_cupom: parseInt(isValid[0][0].id_cupom),
+      totalDesconto: isValid[0][0].valordesconto
+    };
   } catch (error) {
     console.log(error);
     throw new Error(error.message);
