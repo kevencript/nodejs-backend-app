@@ -306,7 +306,7 @@ exports.servicos_estabelecimento = async (req, res) => {
       let modeloDeObjeto = {
         id_categoria: parseInt(id_categoria),
         desc_categoria: desccategoria,
-        elementos_soltos: []
+        servicos: []
       };
 
       // SEGUNDA ITERAÇÃO: Subcategorias Serviços
@@ -351,7 +351,7 @@ exports.servicos_estabelecimento = async (req, res) => {
             preco: valorservico
           };
 
-          await modeloDeObjeto.elementos_soltos.push(elementoSolto);
+          await modeloDeObjeto.servicos.push(elementoSolto);
         } else {
           // Caso TENHA subcategoria
 
