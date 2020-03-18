@@ -16,12 +16,7 @@ const { check, validationResult } = require("express-validator");
 const moment = require("moment");
 
 // models
-const {
-  sys_users,
-  cad_cartoes,
-  sequelize,
-  cad_bandeira
-} = require("../../../sequelize/models");
+const { sys_users, sequelize } = require("../../../sequelize/models");
 
 // @type     Middleware de validação dos campos
 // @route    POST /api/agendamentos/cartao-credito
@@ -514,8 +509,11 @@ exports.pre_agendar = async (req, res) => {
       }
     );
 
+    if (!insertPreAgendamento[1] == 1)
+      throw new Error("Erro ao inserir pré-agendamento");
+
     // Inserindo na tabela do funcionário
-    const insertFuncionario = await sequelize.query(
+    await sequelize.query(
       `
       INSERT INTO
         public.age_funcionarios_servicos
