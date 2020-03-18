@@ -39,7 +39,7 @@ const { imageUpload } = require("../../../utilitarios/imageUpload");
 // @acess    Public
 router.post("/", [validator_registrar], registrar_usuario);
 
-// @route    GET /api/users/all
+// @route    GET /api/users
 // @desc     Retornar todos os usuários do banco
 // @acess    Private
 router.get("/", Auth, retornar_todos_usuarios);

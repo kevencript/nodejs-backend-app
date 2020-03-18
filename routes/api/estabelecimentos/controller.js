@@ -237,101 +237,198 @@ exports.servicos_estabelecimento = async (req, res) => {
     if (!id_estabelecimento) throw new Error("ID do estabelecimento inválido");
 
     // Retornando lista de categorias relacionadas ao estabelecimento
-    const categoriasParaIterar = await sequelize.query(`
-        SELECT
-        distinct ESE.id_categoria, CAD.desccategoria
-          FROM
-            public.est_estabelecimento_servicos ESE
-            INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
-          WHERE ESE.id_estabelecimento=${id_estabelecimento}`);
+    const categoriasParaIterar = await sequelize.query(
+      `
+      SELECT
+            DISTINCT  CAT.ID_CATEGORIA,
+              CAT.DESCCATEGORIA
+      FROM
+              CAD_CATEGORIAS CAT
+      WHERE
+              CAT.ID_CATEGORIA IN
+              (
+                      SELECT
+                              SUB.id_categoria
+                      FROM
+                              est_estabelecimento_servicos ES
+                      LEFT JOIN
+                              cad_subcategorias_servicos SUB
+                      ON
+                              ES.id_subcategoria_servico = SUB.id_subcategoria_servico
+                      WHERE
+                              ES.id_estabelecimento=:id_estabelecimento )`,
+      {
+        replacements: { id_estabelecimento },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
 
-    const objetoFinal = []; // Conterá os objetos prontos para serem retornados via HTTP
+    if (!categoriasParaIterar[0])
+      throw new Error(
+        "Nenhuma categoria encontrada a partir do ID de estabelecimento"
+      );
 
-    // Iterando as categorias e expandindo as subcategorias
-    for (categoria of categoriasParaIterar[0]) {
+    const objetosFinais = []; // Conterá os objetos prontos para serem retornados via HTTP
+
+    // PRIMEIRA ITERAÇÃO: Categorias
+    for (categoria of categoriasParaIterar) {
       const { id_categoria, desccategoria } = categoria;
 
-      // Retornando lista com as subcategorias distintas para serem expandidas futuramente
-      const subcategoriasDistintas = await sequelize.query(`SELECT
-            distinct
-              SUB.id_subcategoria,
-              SUB.descsubcategoria
-            FROM
-              public.est_estabelecimento_servicos ESE
-              INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
-              INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
-            WHERE 
-                ESE.id_estabelecimento=${id_estabelecimento} and CAD.id_categoria = ${id_categoria}`);
+      // Retornando lista de subcategoria_servicos para iterar
+      const subServicosParaIterar = await sequelize.query(
+        `
+        SELECT
+        distinct  ES.id_subcategoria_servico
+                FROM
+                        est_estabelecimento_servicos ES
+                LEFT JOIN
+                        cad_subcategorias_servicos SUB
+                ON
+                        ES.id_subcategoria_servico = SUB.id_subcategoria_servico
+                WHERE
+                         ES.ativo = true and ES.id_estabelecimento=:id_estabelecimento and 
+                         SUB.id_categoria = :id_categoria`,
+        {
+          replacements: {
+            id_estabelecimento,
+            id_categoria
+          },
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
 
-      // Definindo objeto com subcategorias para expandir-las
-      const subcategoriasParaIterar = {
+      if (!subServicosParaIterar[0])
+        throw new Error(
+          "Nenhuma subcategoria serviço a partir do ID de estabelecimento"
+        );
+
+      // Modelo inicial do objeto que iremos retornar
+      let modeloDeObjeto = {
         id_categoria: parseInt(id_categoria),
         desc_categoria: desccategoria,
-        subcategorias: subcategoriasDistintas[0]
+        elementos_soltos: []
       };
 
-      const subcategoriasFinais = []; // Conterá a esturtura junto às subcategorias (expandire-mos os serviços futuramente)
+      // SEGUNDA ITERAÇÃO: Subcategorias Serviços
+      for (subcategoria_servico of subServicosParaIterar) {
+        const { id_subcategoria_servico } = subcategoria_servico;
 
-      // Percorrendo subcategorias e expandindo o serviço
-      for (item of subcategoriasParaIterar.subcategorias) {
-        const { id_subcategoria } = item;
+        const infosSubServico = await sequelize.query(
+          `
+            SELECT 
+              SUB.id_subcategoria_servico,
+              SUB.id_subcategoria,
+              SUB.descsubcategoriaservico,
+              ES.valorservico,
+              ES.id_estabelecimento_servico
+            FROM
+              public.cad_subcategorias_servicos SUB
+			      LEFT JOIN public.est_estabelecimento_servicos ES oN
+			        (ES.id_subcategoria_servico = SUB.id_subcategoria_servico)
+            WHERE SUB.id_categoria = :id_categoria and SUB.id_subcategoria_servico = :id_subcategoria_servico`,
+          {
+            replacements: {
+              id_categoria,
+              id_subcategoria_servico
+            },
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
 
-        const infosServicos = await sequelize.query(`
-          SELECT
-            ESE.id_subcategoria_servico,
-            SSE.descsubcategoriaservico,
-            ESE.valorservico
-          FROM
-            public.est_estabelecimento_servicos ESE
-            INNER JOIN public.est_estabelecimentos ES ON (ESE.id_estabelecimento = ES.id_estabelecimento)
-            INNER JOIN public.cad_categorias CAD ON (CAD.id_categoria = ESE.id_categoria)
-            INNER JOIN public.cad_subcategorias SUB ON (SUB.id_categoria = CAD.id_categoria)
-            LEFT  JOIN public.cad_subcategorias_servicos SSE ON (SSE.id_subcategoria = SUB.id_subcategoria)
-          WHERE
-            ESE.id_estabelecimento=${id_estabelecimento} and 
-            CAD.id_categoria = ${id_categoria} and SUB.id_subcategoria = ${id_subcategoria}`);
+        // Desconsturindo informações
+        const {
+          id_estabelecimento_servico,
+          id_subcategoria,
+          descsubcategoriaservico,
+          valorservico
+        } = infosSubServico[0];
 
-        const arrayServicos = [];
-
-        // Percorrendo serviços e setando valores
-        for (servico of infosServicos[0]) {
-          const {
-            id_subcategoria_servico,
-            valorservico,
-            descsubcategoriaservico
-          } = servico;
-
-          await arrayServicos.push({
-            id_subcategoria_servico: parseInt(id_subcategoria_servico),
+        // Caso NÃO tenha subcategoria
+        if (id_subcategoria === null) {
+          const elementoSolto = {
+            id_estabelecimento_servico: parseInt(id_estabelecimento_servico),
             desc_servico: descsubcategoriaservico,
-            valor_servico: valorservico
-          });
+            preco: valorservico
+          };
+
+          await modeloDeObjeto.elementos_soltos.push(elementoSolto);
+        } else {
+          // Caso TENHA subcategoria
+
+          const infosSubcategoria = await sequelize.query(
+            `
+            select descsubcategoria from cad_subcategorias where id_subcategoria = :id_subcategoria
+          `,
+            {
+              replacements: {
+                id_subcategoria
+              },
+              type: sequelize.QueryTypes.SELECT
+            }
+          );
+
+          // Validando se já existe alguma subcategoria no modelo de objeto
+          if (modeloDeObjeto.subcategorias) {
+            let subcategoriasGerais = [];
+
+            for (subcategoria of modeloDeObjeto.subcategorias) {
+              // Caso a subcategoria percorrida seja a qual queremos inserir um novo serviço
+              if (subcategoria.id_subcategoria == id_subcategoria) {
+                const novoServico = {
+                  id_estabelecimento_servico: parseInt(
+                    id_estabelecimento_servico
+                  ),
+                  desc_servico: descsubcategoriaservico,
+                  preco: valorservico
+                };
+
+                // Criando uma cópia da "subcategoria" para inserir-mos o novo serviço
+                const novaSubcategoria = subcategoria;
+                await novaSubcategoria.servicos.push(novoServico);
+
+                await subcategoriasGerais.push(novaSubcategoria);
+              } else {
+                await subcategoriasGerais.push(subcategoria);
+              }
+            }
+
+            modeloDeObjeto.subcategorias = subcategoriasGerais;
+          } else {
+            // Criando a estrutura da primeira Subcategoria a ser inserida
+            const estruturaSubcategoria = [
+              {
+                id_subcategoria: parseInt(id_subcategoria),
+                desc_subcategoria: infosSubcategoria[0].descsubcategoria,
+                servicos: [
+                  {
+                    id_estabelecimento_servico: parseInt(
+                      id_estabelecimento_servico
+                    ),
+                    desc_servico: descsubcategoriaservico,
+                    preco: valorservico
+                  }
+                ]
+              }
+            ];
+
+            modeloDeObjeto.subcategorias = estruturaSubcategoria;
+          }
         }
-
-        // Acoplando serviços à nova subcategoria
-        const novaSubcategoria = {
-          ...item,
-          id_subcategoria: parseInt(item.id_subcategoria),
-          servicos: arrayServicos
-        };
-
-        await subcategoriasFinais.push({ ...novaSubcategoria });
       }
 
-      // Acomplando subcategorias e retornando o objeto final
-      await objetoFinal.push({
-        ...subcategoriasParaIterar,
-        subcategorias: subcategoriasFinais
-      });
+      console.log(modeloDeObjeto);
+
+      await objetosFinais.push(modeloDeObjeto);
     }
 
-    return res.send(objetoFinal);
+    // return res.send(objetoFinal);
+    return res.json(objetosFinais);
   } catch (error) {
     console.log(error);
     res.status(400).json({
       errors: [
         {
-          msg: "Erro ao retornar lista e serviços de um estabelecimento",
+          msg: "Erro ao retornar lista de serviços de um estabelecimento",
           callback: error.message
         }
       ]
